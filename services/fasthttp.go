@@ -44,6 +44,7 @@ func New() *servives {
 func (s *servives) FastHttp(port int) {
 	service := fmt.Sprintf(":%d", port)
 
+	s.fastHttp.GET("/ping", s.pingHandler)
 	s.fastHttp.GET("/api/device/list", s.listDeviceMacHandler)
 	s.fastHttp.POST("/api/mac/verification", s.verificationMacHandler)
 	s.fastHttp.POST("/api/mac/create", s.createMacHandler)
@@ -54,6 +55,10 @@ func (s *servives) FastHttp(port int) {
 	s.fastHttp.POST("/webhook/", s.createDevicesHandler)
 
 	fasthttp.ListenAndServe(service, s.fastHttp.Handler)
+}
+
+func (s *servives) pingHandler(ctx *fasthttp.RequestCtx) {
+	ctx.Write([]byte("Ping Pong Pong"))
 }
 
 func (s *servives) verificationMacHandler(ctx *fasthttp.RequestCtx) {
