@@ -7,13 +7,14 @@ import (
 
 const (
 	port = 8700
+	host = "0.0.0.0"
 )
 
 func main() {
 
 	fmt.Println("http server run port:", port)
 	server := s.New()
-	server.FastHttp(port)
+	server.FastHttp(host, port)
 }
 
 

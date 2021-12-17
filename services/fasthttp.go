@@ -41,8 +41,8 @@ func New() *servives {
 	return &servives{fastHttp: fastHttp, redis: redis}
 }
 
-func (s *servives) FastHttp(port int) {
-	service := fmt.Sprintf(":%d", port)
+func (s *servives) FastHttp(host string, port int) {
+	service := fmt.Sprintf("%s:%d", host,port)
 
 	s.fastHttp.GET("/ping", s.pingHandler)
 	s.fastHttp.GET("/api/device/list", s.listDeviceMacHandler)
