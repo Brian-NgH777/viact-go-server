@@ -14,6 +14,7 @@ var (
 type servives struct {
 	fastHttp *router.Router
 	redis    *Redis
+	mongo    *MongoInstance
 }
 
 type macReq struct {
@@ -53,7 +54,8 @@ type repModel struct {
 func New() *servives {
 	fastHttp := router.New()
 	redis := RConnect()
-	return &servives{fastHttp: fastHttp, redis: redis}
+	mongo := MConnect()
+	return &servives{fastHttp: fastHttp, redis: redis, mongo: mongo}
 }
 
 func (s *servives) FastHttp(host string, port int) {
@@ -68,6 +70,9 @@ func (s *servives) FastHttp(host string, port int) {
 
 	// Webhook for find list devices
 	s.fastHttp.POST("/webhook/devices", s.webhookDevicesHandler)
+
+	// Webhook for snapshots
+	s.fastHttp.POST("/webhook/snapshots", s.webhookSnapshotsHandler)
 
 	fasthttp.ListenAndServe(service, s.fastHttp.Handler)
 }
@@ -140,6 +145,24 @@ func (s *servives) webhookDevicesHandler(ctx *fasthttp.RequestCtx) {
 	rep.Data = true
 	reply, _ := json.Marshal(rep)
 	ctx.SetStatusCode(201)
+	ctx.Write(reply)
+}
+
+func (s *servives) webhookSnapshotsHandler(ctx *fasthttp.RequestCtx) {
+	imageByte, err := ctx.FormFile("file")
+	if err != nil {
+		ctx.Error(err.Error(), fasthttp.StatusInternalServerError)
+		return
+	}
+	err = UploadFile(imageByte)
+	if err != nil {
+		ctx.Error(err.Error(), fasthttp.StatusInternalServerError)
+		return
+	}
+	rep := &repModel{}
+	rep.Data = true
+	reply, _ := json.Marshal(rep)
+	ctx.SetStatusCode(200)
 	ctx.Write(reply)
 }
 
