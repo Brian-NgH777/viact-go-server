@@ -9,6 +9,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"os"
 	"path"
+	"path/filepath"
 	"time"
 )
 
@@ -185,13 +186,18 @@ func (s *servives) webhookSnapshotsHandler(ctx *fasthttp.RequestCtx) {
 		return
 	}
 
-	pwd, err := os.Getwd()
+	//pwd, err := os.Getwd()
+	//if err != nil {
+	//	ctx.Error(err.Error(), fasthttp.StatusInternalServerError)
+	//	return
+	//}
+	ex, err := os.Executable()
 	if err != nil {
 		ctx.Error(err.Error(), fasthttp.StatusInternalServerError)
 		return
 	}
-	fmt.Println("pwdpwdpwpwdpwddpwd", pwd)
-	filepath := path.Join(pwd, fmt.Sprintf("%s%s", "./static/", imageByte.Filename))
+	fmt.Println("pwdpwdpwpwdpwddpwd", ex)
+	filepath := path.Join(filepath.Dir(ex), fmt.Sprintf("%s%s", "./static/", imageByte.Filename))
 	fmt.Println("filepathfilepathfilepath", filepath)
 	if err = fasthttp.SaveMultipartFile(imageByte, filepath); err != nil {
 		ctx.Error(err.Error(), fasthttp.StatusInternalServerError)
