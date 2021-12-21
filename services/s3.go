@@ -10,10 +10,10 @@ import (
 )
 
 const (
-	AWS_S3_REGION = "ap-southeast-1"
-	AWS_S3_BUCKET = "viact-bridge"
-	AWS_S3_ACCESS_KEY_ID = "AKIAZRF7Z3PJ5HAOTROS"
-	AWS_S3_SECRET_ACCESS_KEY = "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"
+	AWS_S3_REGION = ""
+	AWS_S3_BUCKET = ""
+	AWS_S3_ACCESS_KEY_ID = ""
+	AWS_S3_SECRET_ACCESS_KEY = ""
 	//S3_ACL        = "public-read"
 )
 
