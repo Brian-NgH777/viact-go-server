@@ -100,6 +100,8 @@ func (s *servives) FastHttp(host string, port int) {
 	// Webhook for snapshots
 	s.fastHttp.POST("/webhook/snapshots", s.webhookSnapshotsHandler)
 
+	s.fastHttp.NotFound = fasthttp.FSHandler("./static", 0)
+
 	fasthttp.ListenAndServe(service, s.fastHttp.Handler)
 }
 
@@ -180,11 +182,17 @@ func (s *servives) webhookSnapshotsHandler(ctx *fasthttp.RequestCtx) {
 		ctx.Error(err.Error(), fasthttp.StatusInternalServerError)
 		return
 	}
-	err = UploadFile(imageByte)
-	if err != nil {
+	path := fmt.Sprintf("%s%s", "./static/", imageByte.Filename)
+	if err = fasthttp.SaveMultipartFile(imageByte, path); err != nil {
 		ctx.Error(err.Error(), fasthttp.StatusInternalServerError)
 		return
 	}
+	// err = UploadFile(imageByte)
+	//if err != nil {
+	//	ctx.Error(err.Error(), fasthttp.StatusInternalServerError)
+	//	return
+	//}
+
 	rep := &repModel{}
 	rep.Data = true
 	reply, _ := json.Marshal(rep)
