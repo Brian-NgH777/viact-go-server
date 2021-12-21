@@ -103,9 +103,8 @@ func (s *servives) FastHttp(host string, port int) {
 	// Webhook for snapshots
 	s.fastHttp.POST("/webhook/snapshots", s.webhookSnapshotsHandler)
 
-	ex, _ := os.Executable()
-	fmt.Println("asdsadasd", fmt.Sprintf("%s%s", ex,"/static"))
-	s.fastHttp.ServeFiles("/static/{filepath:*}", filepath.Dir(fmt.Sprintf("%s%s", ex,"/static")))
+
+	s.fastHttp.ServeFiles("/static/{filepath:*}", "/home/ec2-user/viact-go-server/static")
 
 	fasthttp.ListenAndServe(service, s.fastHttp.Handler)
 }
