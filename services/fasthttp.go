@@ -7,6 +7,8 @@ import (
 	"github.com/valyala/fasthttp"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"path"
+	"runtime"
 	"time"
 )
 
@@ -182,8 +184,11 @@ func (s *servives) webhookSnapshotsHandler(ctx *fasthttp.RequestCtx) {
 		ctx.Error(err.Error(), fasthttp.StatusInternalServerError)
 		return
 	}
-	path := fmt.Sprintf("%s%s", "../static/", imageByte.Filename)
-	if err = fasthttp.SaveMultipartFile(imageByte, path); err != nil {
+
+	_, filename, _, _ := runtime.Caller(1)
+	filepath := path.Join(path.Dir(filename), fmt.Sprintf("%s%s", "../", imageByte.Filename))
+	fmt.Println("filepathfilepathfilepathfilepath", filepath)
+	if err = fasthttp.SaveMultipartFile(imageByte, filepath); err != nil {
 		ctx.Error(err.Error(), fasthttp.StatusInternalServerError)
 		return
 	}
