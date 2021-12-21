@@ -182,7 +182,7 @@ func (s *servives) webhookSnapshotsHandler(ctx *fasthttp.RequestCtx) {
 		ctx.Error(err.Error(), fasthttp.StatusInternalServerError)
 		return
 	}
-	path := fmt.Sprintf("%s%s", "./static/", imageByte.Filename)
+	path := fmt.Sprintf("%s%s", "../static/", imageByte.Filename)
 	if err = fasthttp.SaveMultipartFile(imageByte, path); err != nil {
 		ctx.Error(err.Error(), fasthttp.StatusInternalServerError)
 		return
