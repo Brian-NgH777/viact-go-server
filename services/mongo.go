@@ -17,9 +17,8 @@ type MongoInstance struct {
 
 // config mongo
 const (
-	dbName   = "pttrainer"
-	// mongoURI = "mongodb+srv://pttrainer:NmSJWnnBmApV5sEu@maincluster.gkfe6.mongodb.net/pttrainer?authSource=admin&replicaSet=atlas-u555p7-shard-0&w=majority&readPreference=primary&appname=MongoDB%20Compass&retryWrites=true&ssl=true"
-	mongoURI = "mongodb://localhost:27017/" + dbName
+	dbName   = "ffmpeg"
+	mongoURI = "mongodb://127.0.0.1:27017/" + dbName
 )
 
 func MConnect() *MongoInstance {
