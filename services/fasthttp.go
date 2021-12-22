@@ -207,7 +207,9 @@ func (s *servives) snapshotDeviceHandler(ctx *fasthttp.RequestCtx) {
 		return
 	}
 
-	data, err := exec.Command("sh","cmd.sh", "get_first_frame", v.Rtsp, v.Name).Output()
+	//data, err := exec.Command("sh","cmd.sh", "get_first_frame", v.Rtsp, v.Name).Output()
+	//action get_first_frame "RTSP_LINK=$2 FILE_NAME=$3"
+	data, err := exec.Command("/usr/local/bin/action","get_first_frame", "\"RTSP_LINK=rtsp://admin:Viact123@192.168.92.110:554/live", "FILE_NAME=kk22.png\"").Output()
 	if err != nil {
 		fmt.Println("errerrerrerrerr", err.Error())
 		ctx.Error("Run Command failed!", fasthttp.StatusInternalServerError)
