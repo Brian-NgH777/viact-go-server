@@ -1,19 +1,12 @@
 #!/bin/bash
 
 cmdHandler () {
-  echo $2
-  echo $3
-
 	if [ $1 == 'get_first_frame' ]
   then
-     echo $2
-     echo $3
-#    action get_first_frame "RTSP_LINK=rtsp://admin:Viact123@192.168.92.110:554/live FILE_NAME=luna.jpg"
+      action get_first_frame "RTSP_LINK=$2 FILE_NAME=$3"
   elif [ $1 == 'livestream' ]
   then
-#    action livestream "RTSP_LINK=rtsp://admin:Viact123@192.168.92.111/live RTMP_LINK=rtmp://54.254.0.41/live/test7"
-      echo $2
-      echo $3
+      action livestream "RTSP_LINK=$2 RTMP_LINK=$3"
   else
     echo "cmdHandler not run"
   fi
