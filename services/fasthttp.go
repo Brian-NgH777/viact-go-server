@@ -176,6 +176,7 @@ func (s *servives) scanDeviceHandler(ctx *fasthttp.RequestCtx) {
 		return
 	}
 	sDec, _ := b64.StdEncoding.DecodeString(string(data))
+	fmt.Println(string(sDec))
 	rep.Data = string(sDec)
 	reply, _ := json.Marshal(rep)
 	ctx.SetStatusCode(200)
