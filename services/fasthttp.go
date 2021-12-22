@@ -219,7 +219,7 @@ func (s *servives) snapshotDeviceHandler(ctx *fasthttp.RequestCtx) {
 	//action get_first_frame "RTSP_LINK=$2 FILE_NAME=$3"
 	arg := fmt.Sprintf("\"RTSP_LINK=%s FILE_NAME=%s\"", v.Rtsp, v.Name)
 	fmt.Println("v.Rtsp, v.Name", arg)
-	data, err := exec.Command("action","get_first_frame", "RTSP_LINK=rtsp://admin:Viact123@192.168.92.110:554/live FILE_NAME=aaa13.png").Output()
+	data, err := exec.Command("/usr/local/bin/action","get_first_frame", "RTSP_LINK=rtsp://admin:Viact123@192.168.92.110:554/live FILE_NAME=aaa13.png").Output()
 	if err != nil {
 		fmt.Println("errerrerrerrerr", err.Error())
 		ctx.Error("Run Command failed!", fasthttp.StatusInternalServerError)
