@@ -117,8 +117,13 @@ func (s *servives) FastHttp(host string, port int) {
 
 	// Serve static files
 	s.fastHttp.NotFound = fasthttp.FSHandler("/home/ec2-user/viact-go-server/static", 0)
+	//fasthttp.ListenAndServe(service)
 
-	fasthttp.ListenAndServe(service, s.fastHttp.Handler)
+	se := &fasthttp.Server{
+		Handler:            s.fastHttp.Handler,
+		MaxRequestBodySize: 100 * 1024 * 1024,
+	}
+	se.ListenAndServe(service)
 }
 
 func (s *servives) pingHandler(ctx *fasthttp.RequestCtx) {
