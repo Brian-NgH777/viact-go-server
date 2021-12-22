@@ -8,6 +8,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"os"
+	"os/exec"
 	"path"
 	"path/filepath"
 	"time"
@@ -168,6 +169,11 @@ func (s *servives) scanDeviceHandler(ctx *fasthttp.RequestCtx) {
 	ctx.Response.Header.Set("Content-Type", "application/json")
 	rep := &repModel{}
 
+	err := exec.Command("action find_device")
+	if err != nil {
+		ctx.Error("Run Command failed!", fasthttp.StatusInternalServerError)
+		return
+	}
 	rep.Data = true
 	reply, _ := json.Marshal(rep)
 	ctx.SetStatusCode(200)
