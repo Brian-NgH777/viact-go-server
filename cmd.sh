@@ -12,6 +12,8 @@ cmdHandler () {
   elif [ $1 == 'livestream' ]
   then
 #    action livestream "RTSP_LINK=rtsp://admin:Viact123@192.168.92.111/live RTMP_LINK=rtmp://54.254.0.41/live/test7"
+      echo $2
+      echo $3
   else
     echo "cmdHandler not run"
   fi
