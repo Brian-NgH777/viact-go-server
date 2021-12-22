@@ -169,13 +169,12 @@ func (s *servives) scanDeviceHandler(ctx *fasthttp.RequestCtx) {
 	ctx.Response.Header.Set("Content-Type", "application/json")
 	rep := &repModel{}
 
-	_, err := exec.Command("/usr/local/bin/action", "find_device").Output()
+	data, err := exec.Command("/usr/local/bin/action", "find_device").Output()
 	if err != nil {
-		fmt.Println("errerrerrerrerrerr", err)
 		ctx.Error("Run Command failed!", fasthttp.StatusInternalServerError)
 		return
 	}
-	rep.Data = true
+	rep.Data = data
 	reply, _ := json.Marshal(rep)
 	ctx.SetStatusCode(200)
 	ctx.Write(reply)
