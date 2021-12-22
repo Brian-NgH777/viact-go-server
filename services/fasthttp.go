@@ -90,8 +90,10 @@ func (s *servives) FastHttp(host string, port int) {
 	service := fmt.Sprintf("%s:%d", host, port)
 
 	s.fastHttp.GET("/ping", s.pingHandler)
-	s.fastHttp.GET("/api/scan-device/list", s.listScanDeviceMacHandler)
-	s.fastHttp.GET("/api/device/list", s.listDeviceMacHandler)
+	s.fastHttp.GET("/api/scan-device/list", s.listScanDeviceHandler)
+	s.fastHttp.GET("/api/scan-device", s.scanDeviceHandler) // call pythoncli for scan
+	s.fastHttp.GET("/api/snapshot", s.snapshotDeviceHandler) // call pythoncli for snapshot
+	s.fastHttp.GET("/api/device/list", s.listDeviceHandler)
 
 	s.fastHttp.POST("/api/mac/verification", s.verificationMacHandler)
 	s.fastHttp.POST("/api/mac/create", s.createMacHandler)
@@ -152,7 +154,7 @@ func (s *servives) createMacHandler(ctx *fasthttp.RequestCtx) {
 
 }
 
-func (s *servives) listScanDeviceMacHandler(ctx *fasthttp.RequestCtx) {
+func (s *servives) listScanDeviceHandler(ctx *fasthttp.RequestCtx) {
 	ctx.Response.Header.Set("Content-Type", "application/json")
 	rep := &repModel{}
 
@@ -162,56 +164,28 @@ func (s *servives) listScanDeviceMacHandler(ctx *fasthttp.RequestCtx) {
 	ctx.Write(reply)
 }
 
-func (s *servives) webhookDevicesHandler(ctx *fasthttp.RequestCtx) {
+func (s *servives) scanDeviceHandler(ctx *fasthttp.RequestCtx) {
 	ctx.Response.Header.Set("Content-Type", "application/json")
-	v := &webhookDeviceReq{}
 	rep := &repModel{}
-	err := json.Unmarshal(ctx.PostBody(), v)
-	if err != nil {
-		ctx.Error(err.Error(), fasthttp.StatusInternalServerError)
-		return
-	}
 
-	listScanDevices = v.Data
-	rep.Data = true
-	reply, _ := json.Marshal(rep)
-	ctx.SetStatusCode(201)
-	ctx.Write(reply)
-}
-
-func (s *servives) webhookSnapshotsHandler(ctx *fasthttp.RequestCtx) {
-	imageByte, err := ctx.FormFile("file")
-	if err != nil {
-		ctx.Error(err.Error(), fasthttp.StatusInternalServerError)
-		return
-	}
-
-	ex, err := os.Executable()
-	if err != nil {
-		ctx.Error(err.Error(), fasthttp.StatusInternalServerError)
-		return
-	}
-	//fmt.Println("pwdpwdpwpwdpwddpwd", ex)
-	filepath := path.Join(filepath.Dir(ex), fmt.Sprintf("%s%s", "./static/", imageByte.Filename))
-	//fmt.Println("filepathfilepathfilepath", filepath)
-	if err = fasthttp.SaveMultipartFile(imageByte, filepath); err != nil {
-		ctx.Error(err.Error(), fasthttp.StatusInternalServerError)
-		return
-	}
-	// err = UploadFile(imageByte)
-	//if err != nil {
-	//	ctx.Error(err.Error(), fasthttp.StatusInternalServerError)
-	//	return
-	//}
-
-	rep := &repModel{}
 	rep.Data = true
 	reply, _ := json.Marshal(rep)
 	ctx.SetStatusCode(200)
 	ctx.Write(reply)
 }
 
-func (s *servives) listDeviceMacHandler(ctx *fasthttp.RequestCtx) {
+func (s *servives) snapshotDeviceHandler(ctx *fasthttp.RequestCtx) {
+	ctx.Response.Header.Set("Content-Type", "application/json")
+	nameFile := ctx.QueryArgs().Peek("name")
+	rep := &repModel{}
+
+	rep.Data = nameFile
+	reply, _ := json.Marshal(rep)
+	ctx.SetStatusCode(200)
+	ctx.Write(reply)
+}
+
+func (s *servives) listDeviceHandler(ctx *fasthttp.RequestCtx) {
 	ctx.Response.Header.Set("Content-Type", "application/json")
 	rep := &repModel{}
 	devices := []*Device{}
@@ -243,7 +217,6 @@ func (s *servives) listDeviceMacHandler(ctx *fasthttp.RequestCtx) {
 
 	ctx.Write(reply)
 }
-
 
 func (s *servives) createDevicesHandler(ctx *fasthttp.RequestCtx) {
 	ctx.Response.Header.Set("Content-Type", "application/json")
@@ -285,3 +258,51 @@ func (s *servives) createDevicesHandler(ctx *fasthttp.RequestCtx) {
 	ctx.SetStatusCode(201)
 	ctx.Write(reply)
 }
+
+func (s *servives) webhookDevicesHandler(ctx *fasthttp.RequestCtx) {
+	ctx.Response.Header.Set("Content-Type", "application/json")
+	v := &webhookDeviceReq{}
+	rep := &repModel{}
+	err := json.Unmarshal(ctx.PostBody(), v)
+	if err != nil {
+		ctx.Error(err.Error(), fasthttp.StatusInternalServerError)
+		return
+	}
+
+	listScanDevices = v.Data
+	rep.Data = true
+	reply, _ := json.Marshal(rep)
+	ctx.SetStatusCode(201)
+	ctx.Write(reply)
+}
+
+func (s *servives) webhookSnapshotsHandler(ctx *fasthttp.RequestCtx) {
+	imageByte, err := ctx.FormFile("file")
+	if err != nil {
+		ctx.Error(err.Error(), fasthttp.StatusInternalServerError)
+		return
+	}
+
+	ex, err := os.Executable()
+	if err != nil {
+		ctx.Error(err.Error(), fasthttp.StatusInternalServerError)
+		return
+	}
+	filepath := path.Join(filepath.Dir(ex), fmt.Sprintf("%s%s", "./static/", imageByte.Filename))
+	if err = fasthttp.SaveMultipartFile(imageByte, filepath); err != nil {
+		ctx.Error(err.Error(), fasthttp.StatusInternalServerError)
+		return
+	}
+	// err = UploadFile(imageByte)
+	//if err != nil {
+	//	ctx.Error(err.Error(), fasthttp.StatusInternalServerError)
+	//	return
+	//}
+
+	rep := &repModel{}
+	rep.Data = true
+	reply, _ := json.Marshal(rep)
+	ctx.SetStatusCode(200)
+	ctx.Write(reply)
+}
+
