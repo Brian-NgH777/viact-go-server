@@ -8,6 +8,8 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"os/exec"
+	"strings"
+	"text/template"
 	"time"
 )
 
@@ -196,6 +198,13 @@ func (s *servives) scanDeviceHandler(ctx *fasthttp.RequestCtx) {
 	ctx.Write(reply)
 }
 
+func format(s string, v interface{}) string {
+	t, b := new(template.Template), new(strings.Builder)
+	template.Must(t.Parse(s)).Execute(b, v)
+	return b.String()
+}
+
+
 func (s *servives) snapshotDeviceHandler(ctx *fasthttp.RequestCtx) {
 	ctx.Response.Header.Set("Content-Type", "application/json")
 	rep := &repModel{}
@@ -211,7 +220,7 @@ func (s *servives) snapshotDeviceHandler(ctx *fasthttp.RequestCtx) {
 	//action get_first_frame "RTSP_LINK=$2 FILE_NAME=$3"
 	//arg := fmt.Sprintf("RTSP_LINK=%s FILE_NAME=%s", v.Rtsp, v.Name)
 
-	arg := "RTSP_LINK=" + v.Rtsp + " FILE_NAME=" + v.Name
+	arg := "RTSP_LINK=" + string(v.Rtsp) + " FILE_NAME=" + v.Name
 	data, err := exec.Command("action","get_first_frame", arg).Output()
 	if err != nil {
 		fmt.Println("errerrerrerrerr", err.Error())
