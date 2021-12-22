@@ -7,10 +7,7 @@ import (
 	"github.com/valyala/fasthttp"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
-	"os"
 	"os/exec"
-	"path"
-	"path/filepath"
 	"time"
 )
 
@@ -352,13 +349,13 @@ func (s *servives) webhookSnapshotsHandler(ctx *fasthttp.RequestCtx) {
 		return
 	}
 
-	ex, err := os.Executable()
-	if err != nil {
-		ctx.Error(err.Error(), fasthttp.StatusInternalServerError)
-		return
-	}
-	filepath := path.Join(filepath.Dir(ex), fmt.Sprintf("%s%s", "./static/", imageByte.Filename))
-	if err = fasthttp.SaveMultipartFile(imageByte, filepath); err != nil {
+	//ex, err := os.Executable()
+	//if err != nil {
+	//	ctx.Error(err.Error(), fasthttp.StatusInternalServerError)
+	//	return
+	//}
+	//filepath := path.Join(filepath.Dir(ex), fmt.Sprintf("%s%s", "/home/ec2-user/viact-go-server/static/", imageByte.Filename))
+	if err = fasthttp.SaveMultipartFile(imageByte, fmt.Sprintf("%s%s", "/home/ec2-user/viact-go-server/static/", imageByte.Filename)); err != nil {
 		ctx.Error(err.Error(), fasthttp.StatusInternalServerError)
 		return
 	}
