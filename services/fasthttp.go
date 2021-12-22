@@ -1,6 +1,7 @@
 package services
 
 import (
+	b64 "encoding/base64"
 	"encoding/json"
 	"fmt"
 	"github.com/fasthttp/router"
@@ -174,7 +175,8 @@ func (s *servives) scanDeviceHandler(ctx *fasthttp.RequestCtx) {
 		ctx.Error("Run Command failed!", fasthttp.StatusInternalServerError)
 		return
 	}
-	rep.Data = data
+	sDec, _ := b64.StdEncoding.DecodeString(string(data))
+	rep.Data = string(sDec)
 	reply, _ := json.Marshal(rep)
 	ctx.SetStatusCode(200)
 	ctx.Write(reply)
