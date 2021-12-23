@@ -8,8 +8,6 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"os/exec"
-	"strings"
-	"text/template"
 	"time"
 )
 
@@ -198,12 +196,6 @@ func (s *servives) scanDeviceHandler(ctx *fasthttp.RequestCtx) {
 	ctx.Write(reply)
 }
 
-func format(s string, v interface{}) string {
-	t, b := new(template.Template), new(strings.Builder)
-	template.Must(t.Parse(s)).Execute(b, v)
-	return b.String()
-}
-
 func (s *servives) snapshotDeviceHandler(ctx *fasthttp.RequestCtx) {
 	ctx.Response.Header.Set("Content-Type", "application/json")
 	rep := &repModel{}
@@ -246,7 +238,7 @@ func (s *servives) streamDeviceHandler(ctx *fasthttp.RequestCtx) {
 		return
 	}
 
-	arg := fmt.Sprintf("livestream RTSP_LINK=%s RTMP_LINK=%s", d.High, d.RTMP)
+	arg := fmt.Sprintf("RTSP_LINK=%s RTMP_LINK=%s", d.High, d.RTMP)
 	_, err = exec.Command("/usr/local/bin/action", "livestream", arg).Output()
 	if err != nil {
 		ctx.Error(fmt.Sprintf("Run Command failed! Error:%s", err.Error()), fasthttp.StatusInternalServerError)
