@@ -218,7 +218,7 @@ func (s *servives) snapshotDeviceHandler(ctx *fasthttp.RequestCtx) {
 
 	//data, err := exec.Command("sh","cmd.sh", "get_first_frame", v.Rtsp, v.Name).Output()
 	//action get_first_frame "RTSP_LINK=$2 FILE_NAME=$3"
-	arg := fmt.Sprintf("\"RTSP_LINK=%s FILE_NAME=%s\"", v.Rtsp, v.Name)
+	arg := fmt.Sprintf("RTSP_LINK=%s FILE_NAME=%s", v.Rtsp, v.Name)
 	fmt.Println("v.Rtsp, v.Name", arg)
 	data, err := exec.Command("/usr/local/bin/action","get_first_frame", arg).Output()
 	if err != nil {
