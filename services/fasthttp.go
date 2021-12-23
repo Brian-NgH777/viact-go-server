@@ -215,8 +215,6 @@ func (s *servives) snapshotDeviceHandler(ctx *fasthttp.RequestCtx) {
 		return
 	}
 
-	//data, err := exec.Command("sh","cmd.sh", "get_first_frame", v.Rtsp, v.Name).Output()
-	//action get_first_frame "RTSP_LINK=$2 FILE_NAME=$3"
 	arg := fmt.Sprintf("RTSP_LINK=%s FILE_NAME=%s", v.Rtsp, v.Name)
 	fmt.Println("v.Rtsp, v.Name", arg)
 	data, err := exec.Command("/usr/local/bin/action","get_first_frame", arg).Output()
@@ -247,8 +245,9 @@ func (s *servives) streamDeviceHandler(ctx *fasthttp.RequestCtx) {
 		//}
 		return
 	}
-	arg := fmt.Sprintf("livestream \"RTSP_LINK=%s RTMP_LINK=%s\"", d.High, d.RTMP)
-	_, err = exec.Command("/usr/local/bin/action", arg).Output()
+
+	arg := fmt.Sprintf("livestream RTSP_LINK=%s RTMP_LINK=%s", d.High, d.RTMP)
+	_, err = exec.Command("/usr/local/bin/action", "livestream", arg).Output()
 	if err != nil {
 		ctx.Error(fmt.Sprintf("Run Command failed! Error:%s", err.Error()), fasthttp.StatusInternalServerError)
 		return
