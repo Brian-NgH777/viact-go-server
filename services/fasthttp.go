@@ -8,19 +8,32 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"os/exec"
+	"strings"
 	"time"
+
+	t "go/server/services/token"
 )
+
+const ACCESS_TOKEN_SECRET_KEY = "r&0#T)F*~T;7rer])[mHrGt\"(/a^p~]UC.;k4K1%r}A+`8E\"F#,~IIAnI#~uU3S"
+const REFRESH_TOKEN_SECRET_KEY = "VSC&lz`*y=4'?E2?Zc/{1/e2vXT2QQh\"JAua)EtO3Lr2&~UfuLVEd!dBO5s`,\"}"
 
 var (
 	listScanDevices []*webhookDeviceItem
 )
 
-type servives struct {
+const (
+	REFRESH_TOKEN = "refreshToken"
+	ACCESS_TOKEN  = "AccessToken"
+)
+
+// services
+type services struct {
 	fastHttp *router.Router
 	redis    *Redis
 	mongo    *MongoInstance
 }
 
+// Requests
 type macReq struct {
 	Name       string `json:"name"`
 	MacAddress string `json:"macAddress"`
@@ -29,16 +42,6 @@ type macReq struct {
 type snapshotReq struct {
 	Name string `json:"name"`
 	Rtsp string `json:"rtsp"`
-}
-
-type webhookDeviceReq struct {
-	Data []*webhookDeviceItem `json:"data"`
-}
-
-type webhookDeviceItem struct {
-	Ip     string `json:"ip"`
-	Mac    string `json:"mac"`
-	Vendor string `json:"vendor"`
 }
 
 type createDeviceReq struct {
@@ -58,11 +61,27 @@ type createDeviceReq struct {
 	CameraName    string `json:"cameraName"`
 }
 
-type repModel struct {
+type extendPiAccessTokenReq struct {
+	RefeshToken string `json:"refeshToken"`
+	AccessToken string `json:"accessToken"`
+}
+
+type registerPiReq struct {
+	DeviceID string `json:"deviceID"`
+}
+
+// responses
+type respModel struct {
 	Data interface{} `json:"data"`
 }
 
-type Device struct {
+type authPiResp struct {
+	AccessToken string `json:"accessToken"`
+	RefeshToken string `json:"refeshToken"`
+}
+
+// Schema mongo
+type DeviceSchema struct {
 	ID            primitive.ObjectID `json:"_id,omitempty" bson:"_id,omitempty"`
 	IP            string             `json:"ip,omitempty" bson:"ip,omitempty"`
 	User          string             `json:"user,omitempty" bson:"user,omitempty"`
@@ -83,17 +102,32 @@ type Device struct {
 	UpdatedAt     time.Time          `json:"updatedAt,omitempty" bson:"updatedAt,omitempty"`
 }
 
-func New() *servives {
+// Webhook Req
+type webhookDeviceReq struct {
+	Data []*webhookDeviceItem `json:"data"`
+}
+
+type webhookDeviceItem struct {
+	Ip     string `json:"ip"`
+	Mac    string `json:"mac"`
+	Vendor string `json:"vendor"`
+}
+
+func New() *services {
 	fastHttp := router.New()
 	redis := RConnect()
 	mongo := MConnect()
-	return &servives{fastHttp: fastHttp, redis: redis, mongo: mongo}
+	return &services{fastHttp: fastHttp, redis: redis, mongo: mongo}
 }
 
-func (s *servives) FastHttp(host string, port int) {
+func (s *services) FastHttp(host string, port int) {
 	service := fmt.Sprintf("%s:%d", host, port)
 
-	s.fastHttp.GET("/ping", s.pingHandler)
+	s.fastHttp.GET("/ping", WebhookAuth(s.pingHandler))
+
+	// auth pi
+	s.fastHttp.POST("/api/pi/register", s.registerPiHandler)
+	s.fastHttp.POST("/api/pi/access-token/extend", s.extendPiAccessTokenHandler)
 
 	// Live stream Handler
 	s.fastHttp.GET("/api/device/stream/{id}", s.streamDeviceHandler) // call pythoncli for live stream
@@ -109,15 +143,14 @@ func (s *servives) FastHttp(host string, port int) {
 	// Webhook for find list devices Handler
 	s.fastHttp.GET("/api/scan-device/list", s.listScanDeviceHandler)
 	s.fastHttp.GET("/api/scan-device", s.scanDeviceHandler) // call pythoncli for scan
-	s.fastHttp.POST("/webhook/devices", s.webhookDevicesHandler)
+	s.fastHttp.POST("/webhook/devices", WebhookAuth(s.webhookDevicesHandler))
 
 	// Webhook for snapshots Handler
 	s.fastHttp.POST("/api/snapshot", s.snapshotDeviceHandler) // call pythoncli for snapshot
-	s.fastHttp.POST("/webhook/snapshots", s.webhookSnapshotsHandler)
+	s.fastHttp.POST("/webhook/snapshots", WebhookAuth(s.webhookSnapshotsHandler))
 
 	// Serve static files
 	s.fastHttp.NotFound = fasthttp.FSHandler("/home/ec2-user/viact-go-server/static", 0)
-	//fasthttp.ListenAndServe(service)
 
 	se := &fasthttp.Server{
 		Handler:            s.fastHttp.Handler,
@@ -126,13 +159,13 @@ func (s *servives) FastHttp(host string, port int) {
 	se.ListenAndServe(service)
 }
 
-func (s *servives) pingHandler(ctx *fasthttp.RequestCtx) {
+func (s *services) pingHandler(ctx *fasthttp.RequestCtx) {
 	ctx.Write([]byte("Ping Pong Pong"))
 }
 
-func (s *servives) verificationMacHandler(ctx *fasthttp.RequestCtx) {
+func (s *services) verificationMacHandler(ctx *fasthttp.RequestCtx) {
 	ctx.Response.Header.Set("Content-Type", "application/json")
-	rep := &repModel{}
+	rep := &respModel{}
 	v := &macReq{}
 	err := json.Unmarshal(ctx.PostBody(), v)
 	if err != nil {
@@ -149,9 +182,9 @@ func (s *servives) verificationMacHandler(ctx *fasthttp.RequestCtx) {
 	ctx.Write(reply)
 }
 
-func (s *servives) createMacHandler(ctx *fasthttp.RequestCtx) {
+func (s *services) createMacHandler(ctx *fasthttp.RequestCtx) {
 	ctx.Response.Header.Set("Content-Type", "application/json")
-	rep := &repModel{}
+	rep := &respModel{}
 	v := &macReq{}
 	err := json.Unmarshal(ctx.PostBody(), v)
 	if err != nil {
@@ -170,9 +203,9 @@ func (s *servives) createMacHandler(ctx *fasthttp.RequestCtx) {
 
 }
 
-func (s *servives) listScanDeviceHandler(ctx *fasthttp.RequestCtx) {
+func (s *services) listScanDeviceHandler(ctx *fasthttp.RequestCtx) {
 	ctx.Response.Header.Set("Content-Type", "application/json")
-	rep := &repModel{}
+	rep := &respModel{}
 
 	rep.Data = listScanDevices
 	reply, _ := json.Marshal(rep)
@@ -180,9 +213,9 @@ func (s *servives) listScanDeviceHandler(ctx *fasthttp.RequestCtx) {
 	ctx.Write(reply)
 }
 
-func (s *servives) scanDeviceHandler(ctx *fasthttp.RequestCtx) {
+func (s *services) scanDeviceHandler(ctx *fasthttp.RequestCtx) {
 	ctx.Response.Header.Set("Content-Type", "application/json")
-	rep := &repModel{}
+	rep := &respModel{}
 
 	data, err := exec.Command("/usr/local/bin/action", "find_device").Output()
 	if err != nil {
@@ -196,9 +229,9 @@ func (s *servives) scanDeviceHandler(ctx *fasthttp.RequestCtx) {
 	ctx.Write(reply)
 }
 
-func (s *servives) snapshotDeviceHandler(ctx *fasthttp.RequestCtx) {
+func (s *services) snapshotDeviceHandler(ctx *fasthttp.RequestCtx) {
 	ctx.Response.Header.Set("Content-Type", "application/json")
-	rep := &repModel{}
+	rep := &respModel{}
 
 	v := &snapshotReq{}
 	err := json.Unmarshal(ctx.PostBody(), v)
@@ -209,7 +242,7 @@ func (s *servives) snapshotDeviceHandler(ctx *fasthttp.RequestCtx) {
 
 	arg := fmt.Sprintf("RTSP_LINK=%s FILE_NAME=%s", v.Rtsp, v.Name)
 	fmt.Println("v.Rtsp, v.Name", arg)
-	data, err := exec.Command("/usr/local/bin/action","get_first_frame", arg).Output()
+	data, err := exec.Command("/usr/local/bin/action", "get_first_frame", arg).Output()
 	if err != nil {
 		ctx.Error(fmt.Sprintf("Run Command failed! Error:%s", err.Error()), fasthttp.StatusInternalServerError)
 		return
@@ -221,10 +254,10 @@ func (s *servives) snapshotDeviceHandler(ctx *fasthttp.RequestCtx) {
 	ctx.Write(reply)
 }
 
-func (s *servives) streamDeviceHandler(ctx *fasthttp.RequestCtx) {
+func (s *services) streamDeviceHandler(ctx *fasthttp.RequestCtx) {
 	ctx.Response.Header.Set("Content-Type", "application/json")
-	rep := &repModel{}
-	var d Device
+	rep := &respModel{}
+	var d DeviceSchema
 	id := ctx.UserValue("id").(string)
 	collectionDevice := s.mongo.Db.Collection("devices")
 	objID, _ := primitive.ObjectIDFromHex(id)
@@ -251,10 +284,10 @@ func (s *servives) streamDeviceHandler(ctx *fasthttp.RequestCtx) {
 	ctx.Write(reply)
 }
 
-func (s *servives) listDeviceHandler(ctx *fasthttp.RequestCtx) {
+func (s *services) listDeviceHandler(ctx *fasthttp.RequestCtx) {
 	ctx.Response.Header.Set("Content-Type", "application/json")
-	rep := &repModel{}
-	devices := []*Device{}
+	rep := &respModel{}
+	devices := []*DeviceSchema{}
 
 	collectionDevice := s.mongo.Db.Collection("devices")
 	cur, err := collectionDevice.Find(ctx, bson.D{})
@@ -264,7 +297,7 @@ func (s *servives) listDeviceHandler(ctx *fasthttp.RequestCtx) {
 	}
 	defer cur.Close(ctx)
 	for cur.Next(ctx) {
-		var result Device
+		var result DeviceSchema
 		err = cur.Decode(&result)
 		if err != nil {
 			ctx.Error(err.Error(), fasthttp.StatusInternalServerError)
@@ -284,11 +317,11 @@ func (s *servives) listDeviceHandler(ctx *fasthttp.RequestCtx) {
 	ctx.Write(reply)
 }
 
-func (s *servives) createDevicesHandler(ctx *fasthttp.RequestCtx) {
+func (s *services) createDevicesHandler(ctx *fasthttp.RequestCtx) {
 	ctx.Response.Header.Set("Content-Type", "application/json")
 	v := &createDeviceReq{}
-	rep := &repModel{}
-	device := &Device{}
+	rep := &respModel{}
+	device := &DeviceSchema{}
 	err := json.Unmarshal(ctx.PostBody(), v)
 	if err != nil {
 		ctx.Error(err.Error(), fasthttp.StatusInternalServerError)
@@ -325,17 +358,95 @@ func (s *servives) createDevicesHandler(ctx *fasthttp.RequestCtx) {
 		ctx.Error(err.Error(), fasthttp.StatusInternalServerError)
 		return
 	}
-	// call server python pi for run
 	rep.Data = true
 	reply, _ := json.Marshal(rep)
 	ctx.SetStatusCode(201)
 	ctx.Write(reply)
 }
 
-func (s *servives) webhookDevicesHandler(ctx *fasthttp.RequestCtx) {
+func (s *services) registerPiHandler(ctx *fasthttp.RequestCtx) {
+	ctx.Response.Header.Set("Content-Type", "application/json")
+	rep := &authPiResp{}
+	v := &registerPiReq{}
+	err := json.Unmarshal(ctx.PostBody(), v)
+	if err != nil {
+		ctx.Error(err.Error(), fasthttp.StatusBadRequest)
+		return
+	}
+
+	if len(strings.TrimSpace(v.DeviceID)) == 0 {
+		ctx.Error(err.Error(), fasthttp.StatusBadRequest)
+		return
+	}
+
+	tAccess, err := generatorAccessToken(v)
+	if err != nil {
+		ctx.Error(err.Error(), fasthttp.StatusInternalServerError)
+		return
+	}
+
+	tRefresh, err := generatorRefreshToken(v)
+	if err != nil {
+		ctx.Error(err.Error(), fasthttp.StatusInternalServerError)
+		return
+	}
+
+	rep.AccessToken = tAccess
+	rep.RefeshToken = tRefresh
+	reply, _ := json.Marshal(rep)
+	ctx.SetStatusCode(200)
+	ctx.Write(reply)
+}
+
+func (s *services) extendPiAccessTokenHandler(ctx *fasthttp.RequestCtx) {
+	ctx.Response.Header.Set("Content-Type", "application/json")
+	rep := &authPiResp{}
+	v := &extendPiAccessTokenReq{}
+	err := json.Unmarshal(ctx.PostBody(), v)
+	if err != nil {
+		ctx.Error(err.Error(), fasthttp.StatusBadRequest)
+		return
+	}
+
+	payload, err := verifyToken(v.RefeshToken, REFRESH_TOKEN)
+	if err != nil {
+		ctx.Error(fasthttp.StatusMessage(fasthttp.StatusUnauthorized), fasthttp.StatusUnauthorized)
+		return
+	}
+
+	now := time.Now()
+	isExpired := now.Before(payload.ExpiredAt)
+	if isExpired == false {
+		ctx.Error("Token Expired", fasthttp.StatusUnauthorized)
+		return
+	}
+
+	payloadAccessToken, err := verifyToken(v.AccessToken, ACCESS_TOKEN)
+	if err != nil {
+		ctx.Error(fasthttp.StatusMessage(fasthttp.StatusUnauthorized), fasthttp.StatusUnauthorized)
+		return
+	}
+	tAccess := v.AccessToken
+	isAccessTokenExpired := now.Before(payloadAccessToken.ExpiredAt)
+	if isAccessTokenExpired == false {
+		tAccess, err = generatorAccessToken(&registerPiReq{DeviceID: payload.DeviceID})
+		if err != nil {
+			ctx.Error(err.Error(), fasthttp.StatusInternalServerError)
+			return
+		}
+	}
+
+	rep.AccessToken = tAccess
+	rep.RefeshToken = v.RefeshToken
+	reply, _ := json.Marshal(rep)
+	ctx.SetStatusCode(200)
+	ctx.Write(reply)
+}
+
+func (s *services) webhookDevicesHandler(ctx *fasthttp.RequestCtx) {
 	ctx.Response.Header.Set("Content-Type", "application/json")
 	v := &webhookDeviceReq{}
-	rep := &repModel{}
+	rep := &respModel{}
 	err := json.Unmarshal(ctx.PostBody(), v)
 	if err != nil {
 		ctx.Error(err.Error(), fasthttp.StatusInternalServerError)
@@ -349,7 +460,7 @@ func (s *servives) webhookDevicesHandler(ctx *fasthttp.RequestCtx) {
 	ctx.Write(reply)
 }
 
-func (s *servives) webhookSnapshotsHandler(ctx *fasthttp.RequestCtx) {
+func (s *services) webhookSnapshotsHandler(ctx *fasthttp.RequestCtx) {
 	imageByte, err := ctx.FormFile("file")
 	if err != nil {
 		ctx.Error(err.Error(), fasthttp.StatusInternalServerError)
@@ -372,9 +483,66 @@ func (s *servives) webhookSnapshotsHandler(ctx *fasthttp.RequestCtx) {
 	//	return
 	//}
 
-	rep := &repModel{}
+	rep := &respModel{}
 	rep.Data = true
 	reply, _ := json.Marshal(rep)
 	ctx.SetStatusCode(200)
 	ctx.Write(reply)
+}
+
+func generatorAccessToken(data *registerPiReq) (string, error) {
+	maker, err := t.NewJWTMaker(ACCESS_TOKEN_SECRET_KEY)
+
+	deviceID := data.DeviceID
+	duration := time.Hour * 24 * 7
+
+	token, err := maker.CreateToken(deviceID, duration)
+
+	return token, err
+}
+
+func generatorRefreshToken(data *registerPiReq) (string, error) {
+	maker, err := t.NewJWTMaker(REFRESH_TOKEN_SECRET_KEY)
+
+	deviceID := data.DeviceID
+	duration := time.Hour * 24 * 365
+
+	token, err := maker.CreateToken(deviceID, duration)
+
+	return token, err
+}
+
+func verifyToken(token string, typeAuth string) (*t.Payload, error) {
+	key := ACCESS_TOKEN_SECRET_KEY
+	if typeAuth == REFRESH_TOKEN {
+		key = REFRESH_TOKEN_SECRET_KEY
+	}
+	maker, err := t.NewJWTMaker(key)
+	payload, err := maker.VerifyToken(token)
+	return payload, err
+}
+
+func WebhookAuth(h fasthttp.RequestHandler) fasthttp.RequestHandler {
+	return fasthttp.RequestHandler(func(ctx *fasthttp.RequestCtx) {
+		auth := ctx.Request.Header.Peek("Authorization")
+		if auth == nil {
+			ctx.Error(fasthttp.StatusMessage(fasthttp.StatusUnauthorized), fasthttp.StatusUnauthorized)
+		}
+		payload, err := verifyToken(string(auth), ACCESS_TOKEN)
+		if err != nil {
+			ctx.Error(fasthttp.StatusMessage(fasthttp.StatusUnauthorized), fasthttp.StatusUnauthorized)
+		} else {
+			now := time.Now()
+			isExpired := now.Before(payload.ExpiredAt)
+			if isExpired == false {
+				ctx.Error("Token Expired", fasthttp.StatusUnauthorized)
+			} else {
+				h(ctx)
+				return
+			}
+		}
+
+		ctx.Error(fasthttp.StatusMessage(fasthttp.StatusUnauthorized), fasthttp.StatusUnauthorized)
+		ctx.Response.Header.Set("WWW-Authenticate", "Basic realm=Restricted")
+	})
 }
