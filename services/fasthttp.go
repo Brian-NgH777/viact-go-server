@@ -2,6 +2,7 @@ package services
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/fasthttp/router"
 	"github.com/valyala/fasthttp"
@@ -14,16 +15,16 @@ import (
 	t "go/server/services/token"
 )
 
-const ACCESS_TOKEN_SECRET_KEY = "r&0#T)F*~T;7rer])[mHrGt\"(/a^p~]UC.;k4K1%r}A+`8E\"F#,~IIAnI#~uU3S"
-const REFRESH_TOKEN_SECRET_KEY = "VSC&lz`*y=4'?E2?Zc/{1/e2vXT2QQh\"JAua)EtO3Lr2&~UfuLVEd!dBO5s`,\"}"
+const (
+	REFRESH_TOKEN            = "refreshToken"
+	ACCESS_TOKEN             = "AccessToken"
+	REFRESH_TOKEN_SECRET_KEY = "VSC&lz`*y=4'?E2?Zc/{1/e2vXT2QQh\"JAua)EtO3Lr2&~UfuLVEd!dBO5s`,\"}"
+	ACCESS_TOKEN_SECRET_KEY  = "r&0#T)F*~T;7rer])[mHrGt\"(/a^p~]UC.;k4K1%r}A+`8E\"F#,~IIAnI#~uU3S"
+	HEALTH_KEY               = "healthCheck"
+)
 
 var (
 	listScanDevices []*webhookDeviceItem
-)
-
-const (
-	REFRESH_TOKEN = "refreshToken"
-	ACCESS_TOKEN  = "AccessToken"
 )
 
 // services
@@ -66,7 +67,11 @@ type extendPiAccessTokenReq struct {
 	AccessToken string `json:"accessToken"`
 }
 
-type registerPiReq struct {
+type piRegisterReq struct {
+	DeviceID string `json:"deviceID"`
+}
+
+type piHealthReq struct {
 	DeviceID string `json:"deviceID"`
 }
 
@@ -123,7 +128,11 @@ func New() *services {
 func (s *services) FastHttp(host string, port int) {
 	service := fmt.Sprintf("%s:%d", host, port)
 
-	s.fastHttp.GET("/ping", WebhookAuth(s.pingHandler))
+	s.fastHttp.GET("/ping", s.pingHandler)
+
+	// health check pi
+	s.fastHttp.GET("/api/pi/status", s.piStatusHandler)
+	s.fastHttp.POST("/api/pi/health", WebhookAuth(s.piHealthHandler))
 
 	// auth pi
 	s.fastHttp.POST("/api/pi/register", s.registerPiHandler)
@@ -367,7 +376,7 @@ func (s *services) createDevicesHandler(ctx *fasthttp.RequestCtx) {
 func (s *services) registerPiHandler(ctx *fasthttp.RequestCtx) {
 	ctx.Response.Header.Set("Content-Type", "application/json")
 	rep := &authPiResp{}
-	v := &registerPiReq{}
+	v := &piRegisterReq{}
 	err := json.Unmarshal(ctx.PostBody(), v)
 	if err != nil {
 		ctx.Error(err.Error(), fasthttp.StatusBadRequest)
@@ -410,34 +419,64 @@ func (s *services) extendPiAccessTokenHandler(ctx *fasthttp.RequestCtx) {
 
 	payload, err := verifyToken(v.RefeshToken, REFRESH_TOKEN)
 	if err != nil {
-		ctx.Error(fasthttp.StatusMessage(fasthttp.StatusUnauthorized), fasthttp.StatusUnauthorized)
+		ctx.Error(err.Error(), fasthttp.StatusUnauthorized)
 		return
 	}
 
-	now := time.Now()
-	isExpired := now.Before(payload.ExpiredAt)
-	if isExpired == false {
-		ctx.Error("Token Expired", fasthttp.StatusUnauthorized)
-		return
-	}
-
-	payloadAccessToken, err := verifyToken(v.AccessToken, ACCESS_TOKEN)
-	if err != nil {
-		ctx.Error(fasthttp.StatusMessage(fasthttp.StatusUnauthorized), fasthttp.StatusUnauthorized)
-		return
-	}
 	tAccess := v.AccessToken
-	isAccessTokenExpired := now.Before(payloadAccessToken.ExpiredAt)
-	if isAccessTokenExpired == false {
-		tAccess, err = generatorAccessToken(&registerPiReq{DeviceID: payload.DeviceID})
-		if err != nil {
-			ctx.Error(err.Error(), fasthttp.StatusInternalServerError)
+	_, err = verifyToken(v.AccessToken, ACCESS_TOKEN)
+	if err != nil {
+		if errors.Is(err, t.ErrExpiredToken) {
+			tAccess, err = generatorAccessToken(&piRegisterReq{DeviceID: payload.DeviceID})
+			if err != nil {
+				ctx.Error(err.Error(), fasthttp.StatusInternalServerError)
+				return
+			}
+		} else {
+			ctx.Error(err.Error(), fasthttp.StatusUnauthorized)
 			return
 		}
 	}
 
 	rep.AccessToken = tAccess
 	rep.RefeshToken = v.RefeshToken
+	reply, _ := json.Marshal(rep)
+	ctx.SetStatusCode(200)
+	ctx.Write(reply)
+}
+
+func (s *services) piHealthHandler(ctx *fasthttp.RequestCtx) {
+	ctx.Response.Header.Set("Content-Type", "application/json")
+	rep := &respModel{}
+	v := &piHealthReq{}
+	err := json.Unmarshal(ctx.PostBody(), v)
+	if err != nil {
+		ctx.Error(err.Error(), fasthttp.StatusBadRequest)
+		return
+	}
+
+	d, err := s.redis.Set(HEALTH_KEY, v.DeviceID, time.Second*5)
+	if err != nil {
+		ctx.Error("Set is false", fasthttp.StatusInternalServerError)
+		return
+	}
+
+	rep.Data = d
+	reply, _ := json.Marshal(rep)
+	ctx.SetStatusCode(200)
+	ctx.Write(reply)
+}
+
+func (s *services) piStatusHandler(ctx *fasthttp.RequestCtx) {
+	ctx.Response.Header.Set("Content-Type", "application/json")
+	rep := &respModel{}
+	rep.Data = true
+
+	_, err := s.redis.Get(HEALTH_KEY)
+	if err != nil {
+		rep.Data = false
+	}
+
 	reply, _ := json.Marshal(rep)
 	ctx.SetStatusCode(200)
 	ctx.Write(reply)
@@ -490,7 +529,7 @@ func (s *services) webhookSnapshotsHandler(ctx *fasthttp.RequestCtx) {
 	ctx.Write(reply)
 }
 
-func generatorAccessToken(data *registerPiReq) (string, error) {
+func generatorAccessToken(data *piRegisterReq) (string, error) {
 	maker, err := t.NewJWTMaker(ACCESS_TOKEN_SECRET_KEY)
 
 	deviceID := data.DeviceID
@@ -501,7 +540,7 @@ func generatorAccessToken(data *registerPiReq) (string, error) {
 	return token, err
 }
 
-func generatorRefreshToken(data *registerPiReq) (string, error) {
+func generatorRefreshToken(data *piRegisterReq) (string, error) {
 	maker, err := t.NewJWTMaker(REFRESH_TOKEN_SECRET_KEY)
 
 	deviceID := data.DeviceID
@@ -530,16 +569,11 @@ func WebhookAuth(h fasthttp.RequestHandler) fasthttp.RequestHandler {
 		}
 		payload, err := verifyToken(string(auth), ACCESS_TOKEN)
 		if err != nil {
-			ctx.Error(fasthttp.StatusMessage(fasthttp.StatusUnauthorized), fasthttp.StatusUnauthorized)
+			ctx.Error(err.Error(), fasthttp.StatusUnauthorized)
 		} else {
-			now := time.Now()
-			isExpired := now.Before(payload.ExpiredAt)
-			if isExpired == false {
-				ctx.Error("Token Expired", fasthttp.StatusUnauthorized)
-			} else {
-				h(ctx)
-				return
-			}
+			fmt.Println("payloadpayload", payload)
+			h(ctx)
+			return
 		}
 
 		ctx.Error(fasthttp.StatusMessage(fasthttp.StatusUnauthorized), fasthttp.StatusUnauthorized)
