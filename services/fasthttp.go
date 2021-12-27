@@ -169,7 +169,7 @@ func (s *services) verificationMacHandler(ctx *fasthttp.RequestCtx) {
 	v := &macReq{}
 	err := json.Unmarshal(ctx.PostBody(), v)
 	if err != nil {
-		ctx.Error(err.Error(), fasthttp.StatusInternalServerError)
+		ctx.Error(err.Error(), fasthttp.StatusBadRequest)
 		return
 	}
 	rep.Data = true
@@ -188,7 +188,7 @@ func (s *services) createMacHandler(ctx *fasthttp.RequestCtx) {
 	v := &macReq{}
 	err := json.Unmarshal(ctx.PostBody(), v)
 	if err != nil {
-		ctx.Error(err.Error(), fasthttp.StatusInternalServerError)
+		ctx.Error(err.Error(), fasthttp.StatusBadRequest)
 		return
 	}
 	_, err = s.redis.HSet(v.MacAddress, "macAress", fmt.Sprintf("%s-%s", v.Name, v.MacAddress))
@@ -236,7 +236,7 @@ func (s *services) snapshotDeviceHandler(ctx *fasthttp.RequestCtx) {
 	v := &snapshotReq{}
 	err := json.Unmarshal(ctx.PostBody(), v)
 	if err != nil {
-		ctx.Error(err.Error(), fasthttp.StatusInternalServerError)
+		ctx.Error(err.Error(), fasthttp.StatusBadRequest)
 		return
 	}
 
@@ -324,7 +324,7 @@ func (s *services) createDevicesHandler(ctx *fasthttp.RequestCtx) {
 	device := &DeviceSchema{}
 	err := json.Unmarshal(ctx.PostBody(), v)
 	if err != nil {
-		ctx.Error(err.Error(), fasthttp.StatusInternalServerError)
+		ctx.Error(err.Error(), fasthttp.StatusBadRequest)
 		return
 	}
 
@@ -449,7 +449,7 @@ func (s *services) webhookDevicesHandler(ctx *fasthttp.RequestCtx) {
 	rep := &respModel{}
 	err := json.Unmarshal(ctx.PostBody(), v)
 	if err != nil {
-		ctx.Error(err.Error(), fasthttp.StatusInternalServerError)
+		ctx.Error(err.Error(), fasthttp.StatusBadRequest)
 		return
 	}
 
