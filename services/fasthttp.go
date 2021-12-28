@@ -202,10 +202,7 @@ func (s *services) verificationMacHandler(ctx *fasthttp.RequestCtx) {
 	v := &macReq{}
 	err := json.Unmarshal(ctx.PostBody(), v)
 	if err != nil {
-		//ctx.Error(err.Error(), fasthttp.StatusBadRequest)
-		//ctx.SetContentType("text/plain")
-		ctx.SetStatusCode(fasthttp.StatusBadRequest)
-		ctx.SetBodyString(err.Error())
+		errorResp(ctx, err.Error(), fasthttp.StatusBadRequest)
 		return
 	}
 	rep.Data = true
@@ -224,8 +221,8 @@ func (s *services) createMacHandler(ctx *fasthttp.RequestCtx) {
 	rep := &respModel{}
 	v := &macReq{}
 	err := json.Unmarshal(ctx.PostBody(), v)
-	if err == nil {
-		errorResp(ctx, "sasdasdsa", fasthttp.StatusBadRequest)
+	if err != nil {
+		errorResp(ctx, err.Error(), fasthttp.StatusBadRequest)
 		return
 	}
 	_, err = s.redis.HSet(v.MacAddress, "macAress", fmt.Sprintf("%s-%s", v.Name, v.MacAddress))
@@ -246,7 +243,7 @@ func (s *services) listScanDeviceHandler(ctx *fasthttp.RequestCtx) {
 
 	rep.Data = listScanDevices
 	reply, _ := json.Marshal(rep)
-	ctx.SetStatusCode(200)
+	ctx.SetStatusCode(fasthttp.StatusOK)
 	ctx.Write(reply)
 }
 
@@ -256,13 +253,13 @@ func (s *services) scanDeviceHandler(ctx *fasthttp.RequestCtx) {
 
 	data, err := exec.Command("/usr/local/bin/action", "find_device").Output()
 	if err != nil {
-		ctx.Error(fmt.Sprintf("Run Command failed! Error:%s", err.Error()), fasthttp.StatusInternalServerError)
+		errorResp(ctx, fmt.Sprintf("Run Command failed! Error:%s", err.Error()), fasthttp.StatusInternalServerError)
 		return
 	}
 
 	rep.Data = string(data)
 	reply, _ := json.Marshal(rep)
-	ctx.SetStatusCode(200)
+	ctx.SetStatusCode(fasthttp.StatusOK)
 	ctx.Write(reply)
 }
 
@@ -273,7 +270,7 @@ func (s *services) snapshotDeviceHandler(ctx *fasthttp.RequestCtx) {
 	v := &snapshotReq{}
 	err := json.Unmarshal(ctx.PostBody(), v)
 	if err != nil {
-		ctx.Error(err.Error(), fasthttp.StatusBadRequest)
+		errorResp(ctx, err.Error(), fasthttp.StatusBadRequest)
 		return
 	}
 
@@ -281,13 +278,13 @@ func (s *services) snapshotDeviceHandler(ctx *fasthttp.RequestCtx) {
 	fmt.Println("v.Rtsp, v.Name", arg)
 	data, err := exec.Command("/usr/local/bin/action", "get_first_frame", arg).Output()
 	if err != nil {
-		ctx.Error(fmt.Sprintf("Run Command failed! Error:%s", err.Error()), fasthttp.StatusInternalServerError)
+		errorResp(ctx, fmt.Sprintf("Run Command failed! Error:%s", err.Error()), fasthttp.StatusBadRequest)
 		return
 	}
 
 	rep.Data = string(data)
 	reply, _ := json.Marshal(rep)
-	ctx.SetStatusCode(200)
+	ctx.SetStatusCode(fasthttp.StatusOK)
 	ctx.Write(reply)
 }
 
@@ -301,7 +298,7 @@ func (s *services) streamDeviceHandler(ctx *fasthttp.RequestCtx) {
 	filter := bson.D{{Key: "_id", Value: objID}}
 	err := collectionDevice.FindOne(ctx, filter).Decode(&d)
 	if err != nil {
-		ctx.Error("Not found device", fasthttp.StatusInternalServerError)
+		errorResp(ctx, fmt.Sprintf("Not found device! Error:%s", err.Error()), fasthttp.StatusInternalServerError)
 		//if err == mongo.ErrNoDocuments {
 		//	return
 		//}
@@ -311,13 +308,13 @@ func (s *services) streamDeviceHandler(ctx *fasthttp.RequestCtx) {
 	arg := fmt.Sprintf("RTSP_LINK=%s RTMP_LINK=%s", d.High, d.RTMP)
 	_, err = exec.Command("/usr/local/bin/action", "livestream", arg).Output()
 	if err != nil {
-		ctx.Error(fmt.Sprintf("Run Command failed! Error:%s", err.Error()), fasthttp.StatusInternalServerError)
+		errorResp(ctx, fmt.Sprintf("Run Command failed! Error:%s", err.Error()), fasthttp.StatusInternalServerError)
 		return
 	}
 
 	rep.Data = d.RTMP
 	reply, _ := json.Marshal(rep)
-	ctx.SetStatusCode(200)
+	ctx.SetStatusCode(fasthttp.StatusOK)
 	ctx.Write(reply)
 }
 
@@ -329,7 +326,7 @@ func (s *services) listDeviceHandler(ctx *fasthttp.RequestCtx) {
 	collectionDevice := s.mongo.Db.Collection("devices")
 	cur, err := collectionDevice.Find(ctx, bson.D{})
 	if err != nil {
-		ctx.Error(err.Error(), fasthttp.StatusInternalServerError)
+		errorResp(ctx, err.Error(), fasthttp.StatusInternalServerError)
 		return
 	}
 	defer cur.Close(ctx)
@@ -337,19 +334,19 @@ func (s *services) listDeviceHandler(ctx *fasthttp.RequestCtx) {
 		var result DeviceSchema
 		err = cur.Decode(&result)
 		if err != nil {
-			ctx.Error(err.Error(), fasthttp.StatusInternalServerError)
+			errorResp(ctx, err.Error(), fasthttp.StatusInternalServerError)
 			return
 		}
 		devices = append(devices, &result)
 	}
 	if err = cur.Err(); err != nil {
-		ctx.Error(err.Error(), fasthttp.StatusInternalServerError)
+		errorResp(ctx, err.Error(), fasthttp.StatusInternalServerError)
 		return
 	}
 
 	rep.Data = devices
 	reply, _ := json.Marshal(rep)
-	ctx.SetStatusCode(201)
+	ctx.SetStatusCode(fasthttp.StatusCreated)
 
 	ctx.Write(reply)
 }
@@ -361,7 +358,7 @@ func (s *services) createDevicesHandler(ctx *fasthttp.RequestCtx) {
 	device := &DeviceSchema{}
 	err := json.Unmarshal(ctx.PostBody(), v)
 	if err != nil {
-		ctx.Error(err.Error(), fasthttp.StatusBadRequest)
+		errorResp(ctx, err.Error(), fasthttp.StatusBadRequest)
 		return
 	}
 
@@ -397,7 +394,7 @@ func (s *services) createDevicesHandler(ctx *fasthttp.RequestCtx) {
 	}
 	rep.Data = true
 	reply, _ := json.Marshal(rep)
-	ctx.SetStatusCode(201)
+	ctx.SetStatusCode(fasthttp.StatusCreated)
 	ctx.Write(reply)
 }
 
@@ -407,31 +404,31 @@ func (s *services) registerPiHandler(ctx *fasthttp.RequestCtx) {
 	v := &piRegisterReq{}
 	err := json.Unmarshal(ctx.PostBody(), v)
 	if err != nil {
-		ctx.Error(err.Error(), fasthttp.StatusBadRequest)
+		errorResp(ctx, err.Error(), fasthttp.StatusBadRequest)
 		return
 	}
 
 	if len(strings.TrimSpace(v.DeviceID)) == 0 {
-		ctx.Error(err.Error(), fasthttp.StatusBadRequest)
+		errorResp(ctx, "Device miss", fasthttp.StatusBadRequest)
 		return
 	}
 
 	tAccess, err := generatorAccessToken(v)
 	if err != nil {
-		ctx.Error(err.Error(), fasthttp.StatusInternalServerError)
+		errorResp(ctx, err.Error(), fasthttp.StatusInternalServerError)
 		return
 	}
 
 	tRefresh, err := generatorRefreshToken(v)
 	if err != nil {
-		ctx.Error(err.Error(), fasthttp.StatusInternalServerError)
+		errorResp(ctx, err.Error(), fasthttp.StatusInternalServerError)
 		return
 	}
 
 	rep.AccessToken = tAccess
 	rep.RefeshToken = tRefresh
 	reply, _ := json.Marshal(rep)
-	ctx.SetStatusCode(200)
+	ctx.SetStatusCode(fasthttp.StatusOK)
 	ctx.Write(reply)
 }
 
@@ -441,13 +438,13 @@ func (s *services) extendPiAccessTokenHandler(ctx *fasthttp.RequestCtx) {
 	v := &extendPiAccessTokenReq{}
 	err := json.Unmarshal(ctx.PostBody(), v)
 	if err != nil {
-		ctx.Error(err.Error(), fasthttp.StatusBadRequest)
+		errorResp(ctx, err.Error(), fasthttp.StatusBadRequest)
 		return
 	}
 
 	payload, err := verifyToken(v.RefeshToken, REFRESH_TOKEN)
 	if err != nil {
-		ctx.Error(err.Error(), fasthttp.StatusUnauthorized)
+		errorResp(ctx, err.Error(), fasthttp.StatusUnauthorized)
 		return
 	}
 
@@ -457,11 +454,11 @@ func (s *services) extendPiAccessTokenHandler(ctx *fasthttp.RequestCtx) {
 		if errors.Is(err, t.ErrExpiredToken) {
 			tAccess, err = generatorAccessToken(&piRegisterReq{DeviceID: payload.DeviceID})
 			if err != nil {
-				ctx.Error(err.Error(), fasthttp.StatusInternalServerError)
+				errorResp(ctx, err.Error(), fasthttp.StatusInternalServerError)
 				return
 			}
 		} else {
-			ctx.Error(err.Error(), fasthttp.StatusUnauthorized)
+			errorResp(ctx, err.Error(), fasthttp.StatusUnauthorized)
 			return
 		}
 	}
@@ -469,7 +466,7 @@ func (s *services) extendPiAccessTokenHandler(ctx *fasthttp.RequestCtx) {
 	rep.AccessToken = tAccess
 	rep.RefeshToken = v.RefeshToken
 	reply, _ := json.Marshal(rep)
-	ctx.SetStatusCode(200)
+	ctx.SetStatusCode(fasthttp.StatusOK)
 	ctx.Write(reply)
 }
 
@@ -479,19 +476,19 @@ func (s *services) piHealthHandler(ctx *fasthttp.RequestCtx) {
 	v := &piHealthReq{}
 	err := json.Unmarshal(ctx.PostBody(), v)
 	if err != nil {
-		ctx.Error(err.Error(), fasthttp.StatusBadRequest)
+		errorResp(ctx, err.Error(), fasthttp.StatusBadRequest)
 		return
 	}
 
 	d, err := s.redis.Set(HEALTH_KEY, v.DeviceID, time.Second*5)
 	if err != nil {
-		ctx.Error("Set is false", fasthttp.StatusInternalServerError)
+		errorResp(ctx, err.Error(), fasthttp.StatusInternalServerError)
 		return
 	}
 
 	rep.Data = d
 	reply, _ := json.Marshal(rep)
-	ctx.SetStatusCode(200)
+	ctx.SetStatusCode(fasthttp.StatusOK)
 	ctx.Write(reply)
 }
 
@@ -506,7 +503,7 @@ func (s *services) piStatusHandler(ctx *fasthttp.RequestCtx) {
 	}
 
 	reply, _ := json.Marshal(rep)
-	ctx.SetStatusCode(200)
+	ctx.SetStatusCode(fasthttp.StatusOK)
 	ctx.Write(reply)
 }
 
@@ -516,21 +513,21 @@ func (s *services) webhookDevicesHandler(ctx *fasthttp.RequestCtx) {
 	rep := &respModel{}
 	err := json.Unmarshal(ctx.PostBody(), v)
 	if err != nil {
-		ctx.Error(err.Error(), fasthttp.StatusBadRequest)
+		errorResp(ctx, err.Error(), fasthttp.StatusBadRequest)
 		return
 	}
 
 	listScanDevices = v.Data
 	rep.Data = true
 	reply, _ := json.Marshal(rep)
-	ctx.SetStatusCode(201)
+	ctx.SetStatusCode(fasthttp.StatusCreated)
 	ctx.Write(reply)
 }
 
 func (s *services) webhookSnapshotsHandler(ctx *fasthttp.RequestCtx) {
 	imageByte, err := ctx.FormFile("file")
 	if err != nil {
-		ctx.Error(err.Error(), fasthttp.StatusInternalServerError)
+		errorResp(ctx, err.Error(), fasthttp.StatusInternalServerError)
 		return
 	}
 
@@ -541,7 +538,7 @@ func (s *services) webhookSnapshotsHandler(ctx *fasthttp.RequestCtx) {
 	//}
 	//filepath := path.Join(filepath.Dir(ex), fmt.Sprintf("%s%s", "/home/ec2-user/viact-go-server/static/", imageByte.Filename))
 	if err = fasthttp.SaveMultipartFile(imageByte, fmt.Sprintf("%s%s", "/home/ec2-user/viact-go-server/static/", imageByte.Filename)); err != nil {
-		ctx.Error(err.Error(), fasthttp.StatusInternalServerError)
+		errorResp(ctx, err.Error(), fasthttp.StatusInternalServerError)
 		return
 	}
 	// err = UploadFile(imageByte)
@@ -553,7 +550,7 @@ func (s *services) webhookSnapshotsHandler(ctx *fasthttp.RequestCtx) {
 	rep := &respModel{}
 	rep.Data = true
 	reply, _ := json.Marshal(rep)
-	ctx.SetStatusCode(200)
+	ctx.SetStatusCode(fasthttp.StatusOK)
 	ctx.Write(reply)
 }
 
@@ -593,6 +590,7 @@ func WebhookAuth(h fasthttp.RequestHandler) fasthttp.RequestHandler {
 	return fasthttp.RequestHandler(func(ctx *fasthttp.RequestCtx) {
 		auth := ctx.Request.Header.Peek("Authorization")
 		if auth == nil {
+			//errorResp(ctx, fasthttp.StatusMessage(fasthttp.StatusUnauthorized), fasthttp.StatusUnauthorized)
 			ctx.Error(fasthttp.StatusMessage(fasthttp.StatusUnauthorized), fasthttp.StatusUnauthorized)
 		}
 		payload, err := verifyToken(string(auth), ACCESS_TOKEN)
