@@ -27,6 +27,13 @@ var (
 	listScanDevices []*webhookDeviceItem
 )
 
+var (
+	corsAllowHeaders     = "authorization"
+	corsAllowMethods     = "HEAD,GET,POST,PUT,DELETE,OPTIONS"
+	corsAllowOrigin      = "*"
+	corsAllowCredentials = "true"
+)
+
 // services
 type services struct {
 	fastHttp *router.Router
@@ -125,6 +132,18 @@ func New() *services {
 	return &services{fastHttp: fastHttp, redis: redis, mongo: mongo}
 }
 
+func CORS(next fasthttp.RequestHandler) fasthttp.RequestHandler {
+	return func(ctx *fasthttp.RequestCtx) {
+
+		ctx.Response.Header.Set("Access-Control-Allow-Credentials", corsAllowCredentials)
+		ctx.Response.Header.Set("Access-Control-Allow-Headers", corsAllowHeaders)
+		ctx.Response.Header.Set("Access-Control-Allow-Methods", corsAllowMethods)
+		ctx.Response.Header.Set("Access-Control-Allow-Origin", corsAllowOrigin)
+
+		next(ctx)
+	}
+}
+
 func (s *services) FastHttp(host string, port int) {
 	service := fmt.Sprintf("%s:%d", host, port)
 
@@ -164,7 +183,7 @@ func (s *services) FastHttp(host string, port int) {
 	s.fastHttp.NotFound = fasthttp.FSHandler("/home/ec2-user/viact-go-server/static", 0)
 
 	se := &fasthttp.Server{
-		Handler:            s.fastHttp.Handler,
+		Handler:            CORS(s.fastHttp.Handler),
 		MaxRequestBodySize: 100 * 1024 * 1024,
 	}
 	se.ListenAndServe(service)
