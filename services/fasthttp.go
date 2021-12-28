@@ -140,7 +140,7 @@ func CORS(next fasthttp.RequestHandler) fasthttp.RequestHandler {
 
 		//ctx.Response.Header.Set("Access-Control-Allow-Credentials", corsAllowCredentials)
 		//ctx.Response.Header.Set("Access-Control-Allow-Headers", corsAllowHeaders)
-		//ctx.Response.Header.Set("Access-Control-Allow-Methods", corsAllowMethods)
+		ctx.Response.Header.Set("Access-Control-Allow-Methods", corsAllowMethods)
 		ctx.Response.Header.Set("Access-Control-Allow-Origin", "*")
 		ctx.Response.Header.Set("Content-Type", "application/json")
 
@@ -221,21 +221,23 @@ func (s *services) createMacHandler(ctx *fasthttp.RequestCtx) {
 	v := &macReq{}
 	err := json.Unmarshal(ctx.PostBody(), v)
 	if err != nil {
+		fmt.Println("sadasd")
 		//ctx.Error(err.Error(), fasthttp.StatusBadRequest)
 		//ctx.SetContentType("text/plain")
 		//ctx.SetStatusCode(fasthttp.StatusBadRequest)
 		//ctx.SetBodyString(err.Error())
-		errors.New(err.Error())
-		return
+		//errors.New(err.Error())
+		//return
 	}
 	_, err = s.redis.HSet(v.MacAddress, "macAress", fmt.Sprintf("%s-%s", v.Name, v.MacAddress))
 	if err != nil {
+		fmt.Println("asdasdd")
 		//ctx.Error("HSet is false", fasthttp.StatusInternalServerError)
 		//ctx.SetContentType("text/plain")
 		//ctx.SetStatusCode(fasthttp.StatusInternalServerError)
 		//ctx.SetBodyString(err.Error())
-		errors.New(err.Error())
-		return
+		//errors.New(err.Error())
+		//return
 	}
 
 	rep.Data = true
