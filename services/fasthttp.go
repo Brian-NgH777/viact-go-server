@@ -148,7 +148,6 @@ func (s *services) FastHttp(host string, port int) {
 	service := fmt.Sprintf("%s:%d", host, port)
 
 	s.fastHttp.GET("/ping", s.pingHandler)
-
 	// health check pi
 	s.fastHttp.GET("/api/pi/status", s.piStatusHandler)
 	s.fastHttp.POST("/api/pi/health", WebhookAuth(s.piHealthHandler))
@@ -197,7 +196,10 @@ func (s *services) verificationMacHandler(ctx *fasthttp.RequestCtx) {
 	v := &macReq{}
 	err := json.Unmarshal(ctx.PostBody(), v)
 	if err != nil {
-		ctx.Error(err.Error(), fasthttp.StatusBadRequest)
+		//ctx.Error(err.Error(), fasthttp.StatusBadRequest)
+		ctx.SetContentType("text/plain")
+		ctx.SetStatusCode(fasthttp.StatusBadRequest)
+		ctx.SetBodyString(err.Error())
 		return
 	}
 	rep.Data = true
