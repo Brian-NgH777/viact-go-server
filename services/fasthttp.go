@@ -151,6 +151,8 @@ func CORS(next fasthttp.RequestHandler) fasthttp.RequestHandler {
 func (s *services) FastHttp(host string, port int) {
 	service := fmt.Sprintf("%s:%d", host, port)
 
+	s.fastHttp.HandleOPTIONS = true
+
 	s.fastHttp.GET("/ping", s.pingHandler)
 	// health check pi
 	s.fastHttp.GET("/api/pi/status", s.piStatusHandler)
