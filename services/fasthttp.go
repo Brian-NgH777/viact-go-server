@@ -135,12 +135,12 @@ func New() *services {
 func CORS(next fasthttp.RequestHandler) fasthttp.RequestHandler {
 	return func(ctx *fasthttp.RequestCtx) {
 
-		ctx.Response.Header.Set("Access-Control-Allow-Credentials", "true")
 		//ctx.Response.Header.SetBytesV("Access-Control-Allow-Origin", "*")
 
 		//ctx.Response.Header.Set("Access-Control-Allow-Credentials", corsAllowCredentials)
 		//ctx.Response.Header.Set("Access-Control-Allow-Headers", corsAllowHeaders)
 		ctx.Response.Header.Set("Access-Control-Allow-Methods", corsAllowMethods)
+		ctx.Response.Header.Set("Access-Control-Allow-Credentials", "true")
 		ctx.Response.Header.Set("Access-Control-Allow-Origin", "*")
 		ctx.Response.Header.Set("Content-Type", "application/json")
 
@@ -184,7 +184,7 @@ func (s *services) FastHttp(host string, port int) {
 	s.fastHttp.NotFound = fasthttp.FSHandler("/home/ec2-user/viact-go-server/static", 0)
 
 	se := &fasthttp.Server{
-		Handler:            CORS(s.fastHttp.Handler),
+		Handler:            s.fastHttp.Handler,
 		MaxRequestBodySize: 100 * 1024 * 1024,
 	}
 	se.ListenAndServe(service)
@@ -217,6 +217,12 @@ func (s *services) verificationMacHandler(ctx *fasthttp.RequestCtx) {
 }
 
 func (s *services) createMacHandler(ctx *fasthttp.RequestCtx) {
+
+	ctx.Response.Header.Set("Access-Control-Allow-Methods", corsAllowMethods)
+	ctx.Response.Header.Set("Access-Control-Allow-Credentials", "true")
+	ctx.Response.Header.Set("Access-Control-Allow-Origin", "*")
+	ctx.Response.Header.Set("Content-Type", "application/json")
+
 	rep := &respModel{}
 	v := &macReq{}
 	err := json.Unmarshal(ctx.PostBody(), v)
