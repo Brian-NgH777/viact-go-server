@@ -223,6 +223,7 @@ func (s *services) createMacHandler(ctx *fasthttp.RequestCtx) {
 	ctx.Response.Header.Set(fasthttp.HeaderAccessControlAllowHeaders, "authorization, content-type, server")
 	ctx.Response.Header.Set(fasthttp.HeaderAccessControlAllowMethods, corsAllowMethods)
 	ctx.Response.Header.Set(fasthttp.HeaderAccessControlAllowCredentials, "false")
+	ctx.Response.Header.Set(fasthttp.HeaderOrigin, "*")
 
 	//ctx.Response.Header.Set("Content-Type", "application/json")
 
