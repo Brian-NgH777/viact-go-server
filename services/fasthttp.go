@@ -88,6 +88,10 @@ type respModel struct {
 	Data interface{} `json:"data"`
 }
 
+type errModel struct {
+	Error interface{} `json:"err"`
+}
+
 type authPiResp struct {
 	AccessToken string `json:"accessToken"`
 	RefeshToken string `json:"refeshToken"`
@@ -141,7 +145,6 @@ func CORS(next fasthttp.RequestHandler) fasthttp.RequestHandler {
 		ctx.Response.Header.Add(fasthttp.HeaderAccessControlAllowMethods, corsAllowMethods)
 		ctx.Response.Header.Add(fasthttp.HeaderAccessControlAllowCredentials, "true")
 		ctx.Response.Header.Add(fasthttp.HeaderOrigin, "*")
-		ctx.Response.Header.Set("Content-Type", "application/json")
 
 		next(ctx)
 	}
@@ -216,36 +219,25 @@ func (s *services) verificationMacHandler(ctx *fasthttp.RequestCtx) {
 }
 
 func (s *services) createMacHandler(ctx *fasthttp.RequestCtx) {
-	//ctx.Response.Header.Set("Content-Type", "application/json")
+	ctx.Response.Header.Set("Content-Type", "application/json")
 
 	rep := &respModel{}
 	v := &macReq{}
 	err := json.Unmarshal(ctx.PostBody(), v)
-	if err != nil {
-		fmt.Println("sadasd")
-		//ctx.Error(err.Error(), fasthttp.StatusBadRequest)
-		//ctx.SetContentType("text/plain")
-		//ctx.SetStatusCode(fasthttp.StatusBadRequest)
-		//ctx.SetBodyString(err.Error())
-		//errors.New(err.Error())
-		//return
+	if err == nil {
+		errorResp(ctx, "sasdasdsa", fasthttp.StatusBadRequest)
+		return
 	}
 	_, err = s.redis.HSet(v.MacAddress, "macAress", fmt.Sprintf("%s-%s", v.Name, v.MacAddress))
 	if err != nil {
-		fmt.Println("asdasdd")
-		//ctx.Error("HSet is false", fasthttp.StatusInternalServerError)
-		//ctx.SetContentType("text/plain")
-		//ctx.SetStatusCode(fasthttp.StatusInternalServerError)
-		//ctx.SetBodyString(err.Error())
-		//errors.New(err.Error())
-		//return
+		errorResp(ctx, err.Error(), fasthttp.StatusBadRequest)
+		return
 	}
 
 	rep.Data = true
 	reply, _ := json.Marshal(rep)
 	ctx.SetStatusCode(fasthttp.StatusCreated)
 	ctx.Write(reply)
-
 }
 
 func (s *services) listScanDeviceHandler(ctx *fasthttp.RequestCtx) {
@@ -615,4 +607,12 @@ func WebhookAuth(h fasthttp.RequestHandler) fasthttp.RequestHandler {
 		ctx.Error(fasthttp.StatusMessage(fasthttp.StatusUnauthorized), fasthttp.StatusUnauthorized)
 		ctx.Response.Header.Set("WWW-Authenticate", "Basic realm=Restricted")
 	})
+}
+
+func errorResp(ctx *fasthttp.RequestCtx, errMsg string, statusCode int) *fasthttp.RequestCtx {
+	rep := &errModel{}
+	rep.Error = errMsg
+	reply, _ := json.Marshal(rep)
+	ctx.SetStatusCode(statusCode)
+	ctx.Write(reply)
 }
