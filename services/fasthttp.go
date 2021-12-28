@@ -128,6 +128,8 @@ func New() *services {
 func (s *services) FastHttp(host string, port int) {
 	service := fmt.Sprintf("%s:%d", host, port)
 
+	webRouter.HandleOPTIONS = true
+
 	s.fastHttp.GET("/ping", s.pingHandler)
 
 	// health check pi
