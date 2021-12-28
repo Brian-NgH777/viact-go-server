@@ -136,13 +136,19 @@ func CORS(next fasthttp.RequestHandler) fasthttp.RequestHandler {
 	return func(ctx *fasthttp.RequestCtx) {
 
 		//ctx.Response.Header.SetBytesV("Access-Control-Allow-Origin", "*")
-
 		//ctx.Response.Header.Set("Access-Control-Allow-Credentials", corsAllowCredentials)
 		//ctx.Response.Header.Set("Access-Control-Allow-Headers", corsAllowHeaders)
-		ctx.Response.Header.Set("Access-Control-Allow-Methods", corsAllowMethods)
-		ctx.Response.Header.Set("Access-Control-Allow-Credentials", "true")
-		ctx.Response.Header.Set("Access-Control-Allow-Origin", "*")
-		ctx.Response.Header.Set("Content-Type", "application/json")
+		//ctx.Response.Header.Set("Access-Control-Allow-Methods", corsAllowMethods)
+		//ctx.Response.Header.Set("Access-Control-Allow-Credentials", "true")
+		//ctx.Response.Header.Set("Access-Control-Allow-Origin", "*")
+
+		ctx.Response.Header.Add(fasthttp.HeaderAccessControlAllowOrigin, "*")
+		ctx.Response.Header.Add(fasthttp.HeaderAccessControlAllowHeaders, "authorization, content-type, server")
+		ctx.Response.Header.Add(fasthttp.HeaderAccessControlAllowMethods, corsAllowMethods)
+		ctx.Response.Header.Add(fasthttp.HeaderAccessControlAllowCredentials, "true")
+		ctx.Response.Header.Add(fasthttp.HeaderOrigin, "*")
+
+		//ctx.Response.Header.Set("Content-Type", "application/json")
 
 		next(ctx)
 	}
@@ -151,7 +157,11 @@ func CORS(next fasthttp.RequestHandler) fasthttp.RequestHandler {
 func (s *services) FastHttp(host string, port int) {
 	service := fmt.Sprintf("%s:%d", host, port)
 
-	//s.fastHttp.HandleOPTIONS = true
+	//ctx.Response.Header.Add(fasthttp.HeaderAccessControlAllowOrigin, "*")
+	//ctx.Response.Header.Add(fasthttp.HeaderAccessControlAllowHeaders, "authorization, content-type, server")
+	//ctx.Response.Header.Add(fasthttp.HeaderAccessControlAllowMethods, corsAllowMethods)
+	//ctx.Response.Header.Add(fasthttp.HeaderAccessControlAllowCredentials, "true")
+	//ctx.Response.Header.Add(fasthttp.HeaderOrigin, "*")
 
 	s.fastHttp.GET("/ping", s.pingHandler)
 	// health check pi
@@ -167,7 +177,7 @@ func (s *services) FastHttp(host string, port int) {
 
 	// verification Mac Handler
 	s.fastHttp.POST("/api/mac/verification", s.verificationMacHandler)
-	s.fastHttp.POST("/api/mac/create", s.createMacHandler)
+	s.fastHttp.POST("/api/mac/create", CORS(s.createMacHandler))
 
 	// Device Handler
 	s.fastHttp.GET("/api/device/list", s.listDeviceHandler)
@@ -219,12 +229,6 @@ func (s *services) verificationMacHandler(ctx *fasthttp.RequestCtx) {
 }
 
 func (s *services) createMacHandler(ctx *fasthttp.RequestCtx) {
-	ctx.Response.Header.Add(fasthttp.HeaderAccessControlAllowOrigin, "*")
-	ctx.Response.Header.Add(fasthttp.HeaderAccessControlAllowHeaders, "authorization, content-type, server")
-	ctx.Response.Header.Add(fasthttp.HeaderAccessControlAllowMethods, corsAllowMethods)
-	ctx.Response.Header.Add(fasthttp.HeaderAccessControlAllowCredentials, "false")
-	ctx.Response.Header.Add(fasthttp.HeaderOrigin, "*")
-
 	//ctx.Response.Header.Set("Content-Type", "application/json")
 
 	rep := &respModel{}
