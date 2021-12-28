@@ -609,7 +609,7 @@ func WebhookAuth(h fasthttp.RequestHandler) fasthttp.RequestHandler {
 	})
 }
 
-func errorResp(ctx *fasthttp.RequestCtx, errMsg string, statusCode int) *fasthttp.RequestCtx {
+func errorResp(ctx *fasthttp.RequestCtx, errMsg string, statusCode int) {
 	rep := &errModel{}
 	rep.Error = errMsg
 	reply, _ := json.Marshal(rep)
