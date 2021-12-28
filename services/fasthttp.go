@@ -219,11 +219,11 @@ func (s *services) verificationMacHandler(ctx *fasthttp.RequestCtx) {
 }
 
 func (s *services) createMacHandler(ctx *fasthttp.RequestCtx) {
-	ctx.Request.Header.Set(fasthttp.HeaderAccessControlAllowOrigin, "*")
-	ctx.Request.Header.Set(fasthttp.HeaderAccessControlAllowHeaders, "authorization, content-type, server")
-	ctx.Request.Header.Set(fasthttp.HeaderAccessControlAllowMethods, corsAllowMethods)
-	ctx.Request.Header.Set(fasthttp.HeaderAccessControlAllowCredentials, "false")
-	ctx.Response.Header.Set(fasthttp.HeaderOrigin, "*")
+	ctx.Response.Header.Add(fasthttp.HeaderAccessControlAllowOrigin, "*")
+	ctx.Response.Header.Add(fasthttp.HeaderAccessControlAllowHeaders, "authorization, content-type, server")
+	ctx.Response.Header.Add(fasthttp.HeaderAccessControlAllowMethods, corsAllowMethods)
+	ctx.Response.Header.Add(fasthttp.HeaderAccessControlAllowCredentials, "false")
+	ctx.Response.Header.Add(fasthttp.HeaderOrigin, "*")
 
 	//ctx.Response.Header.Set("Content-Type", "application/json")
 
