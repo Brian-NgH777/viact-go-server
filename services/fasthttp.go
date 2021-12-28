@@ -218,12 +218,18 @@ func (s *services) createMacHandler(ctx *fasthttp.RequestCtx) {
 	v := &macReq{}
 	err := json.Unmarshal(ctx.PostBody(), v)
 	if err != nil {
-		ctx.Error(err.Error(), fasthttp.StatusBadRequest)
+		//ctx.Error(err.Error(), fasthttp.StatusBadRequest)
+		ctx.SetContentType("text/plain")
+		ctx.SetStatusCode(fasthttp.StatusBadRequest)
+		ctx.SetBodyString(err.Error())
 		return
 	}
 	_, err = s.redis.HSet(v.MacAddress, "macAress", fmt.Sprintf("%s-%s", v.Name, v.MacAddress))
 	if err != nil {
-		ctx.Error("HSet is false", fasthttp.StatusInternalServerError)
+		//ctx.Error("HSet is false", fasthttp.StatusInternalServerError)
+		ctx.SetContentType("text/plain")
+		ctx.SetStatusCode(fasthttp.StatusInternalServerError)
+		ctx.SetBodyString(err.Error())
 	}
 
 	rep.Data = true
