@@ -5,6 +5,7 @@ go 1.17
 require (
 	github.com/aead/chacha20poly1305 v0.0.0-20201124145622-1a5aba2a8b29
 	github.com/aws/aws-sdk-go v1.42.23
+	github.com/buaazp/fasthttprouter v0.1.1
 	github.com/fasthttp/router v1.4.4
 	github.com/go-redis/redis v6.15.9+incompatible
 	github.com/golang-jwt/jwt v3.2.2+incompatible

@@ -4,7 +4,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/fasthttp/router"
+	"github.com/buaazp/fasthttprouter"
+	//"github.com/fasthttp/router"
 	"github.com/valyala/fasthttp"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -36,7 +37,7 @@ var (
 
 // services
 type services struct {
-	fastHttp *router.Router
+	fastHttp *fasthttprouter.Router
 	redis    *Redis
 	mongo    *MongoInstance
 }
@@ -126,7 +127,7 @@ type webhookDeviceItem struct {
 }
 
 func New() *services {
-	fastHttp := router.New()
+	fastHttp := fasthttprouter.New()
 	redis := RConnect()
 	mongo := MConnect()
 	return &services{fastHttp: fastHttp, redis: redis, mongo: mongo}
@@ -135,20 +136,12 @@ func New() *services {
 func CORS(next fasthttp.RequestHandler) fasthttp.RequestHandler {
 	return func(ctx *fasthttp.RequestCtx) {
 
-		//ctx.Response.Header.SetBytesV("Access-Control-Allow-Origin", "*")
-		//ctx.Response.Header.Set("Access-Control-Allow-Credentials", corsAllowCredentials)
-		//ctx.Response.Header.Set("Access-Control-Allow-Headers", corsAllowHeaders)
-		//ctx.Response.Header.Set("Access-Control-Allow-Methods", corsAllowMethods)
-		//ctx.Response.Header.Set("Access-Control-Allow-Credentials", "true")
-		//ctx.Response.Header.Set("Access-Control-Allow-Origin", "*")
-
 		ctx.Response.Header.Add(fasthttp.HeaderAccessControlAllowOrigin, "*")
 		ctx.Response.Header.Add(fasthttp.HeaderAccessControlAllowHeaders, "authorization, content-type, server")
 		ctx.Response.Header.Add(fasthttp.HeaderAccessControlAllowMethods, corsAllowMethods)
 		ctx.Response.Header.Add(fasthttp.HeaderAccessControlAllowCredentials, "true")
 		ctx.Response.Header.Add(fasthttp.HeaderOrigin, "*")
-
-		//ctx.Response.Header.Set("Content-Type", "application/json")
+		ctx.Response.Header.Set("Content-Type", "application/json")
 
 		next(ctx)
 	}
@@ -156,12 +149,6 @@ func CORS(next fasthttp.RequestHandler) fasthttp.RequestHandler {
 
 func (s *services) FastHttp(host string, port int) {
 	service := fmt.Sprintf("%s:%d", host, port)
-
-	//ctx.Response.Header.Add(fasthttp.HeaderAccessControlAllowOrigin, "*")
-	//ctx.Response.Header.Add(fasthttp.HeaderAccessControlAllowHeaders, "authorization, content-type, server")
-	//ctx.Response.Header.Add(fasthttp.HeaderAccessControlAllowMethods, corsAllowMethods)
-	//ctx.Response.Header.Add(fasthttp.HeaderAccessControlAllowCredentials, "true")
-	//ctx.Response.Header.Add(fasthttp.HeaderOrigin, "*")
 
 	s.fastHttp.GET("/ping", s.pingHandler)
 	// health check pi
@@ -177,7 +164,7 @@ func (s *services) FastHttp(host string, port int) {
 
 	// verification Mac Handler
 	s.fastHttp.POST("/api/mac/verification", s.verificationMacHandler)
-	s.fastHttp.POST("/api/mac/create", CORS(s.createMacHandler))
+	s.fastHttp.POST("/api/mac/create", s.createMacHandler)
 
 	// Device Handler
 	s.fastHttp.GET("/api/device/list", s.listDeviceHandler)
@@ -196,7 +183,7 @@ func (s *services) FastHttp(host string, port int) {
 	s.fastHttp.NotFound = fasthttp.FSHandler("/home/ec2-user/viact-go-server/static", 0)
 
 	se := &fasthttp.Server{
-		Handler:            s.fastHttp.Handler,
+		Handler:            CORS(s.fastHttp.Handler),
 		MaxRequestBodySize: 100 * 1024 * 1024,
 	}
 	se.ListenAndServe(service)
