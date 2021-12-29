@@ -176,11 +176,11 @@ func (s *services) FastHttp(host string, port int) {
 	// Webhook for find list devices Handler
 	s.fastHttp.GET("/api/scan-device/list", s.listScanDeviceHandler)
 	s.fastHttp.GET("/api/scan-device", s.scanDeviceHandler) // call pythoncli for scan
-	s.fastHttp.POST("/webhook/devices", s.webhookDevicesHandler) // WebhookAuth
+	s.fastHttp.POST("/webhook/devices", WebhookAuth(s.webhookDevicesHandler))
 
 	// Webhook for snapshots Handler
 	s.fastHttp.POST("/api/snapshot", s.snapshotDeviceHandler) // call pythoncli for snapshot
-	s.fastHttp.POST("/webhook/snapshots", s.webhookSnapshotsHandler) // WebhookAuth
+	s.fastHttp.POST("/webhook/snapshots", WebhookAuth(s.webhookSnapshotsHandler))
 
 	// Serve static files
 	s.fastHttp.NotFound = fasthttp.FSHandler("/home/ec2-user/viact-go-server/static", 0)
