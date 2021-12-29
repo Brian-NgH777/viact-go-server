@@ -163,7 +163,8 @@ func (s *services) FastHttp(host string, port int) {
 	s.fastHttp.POST("/api/pi/access-token/extend", s.extendPiAccessTokenHandler)
 
 	// Live stream Handler
-	s.fastHttp.GET("/api/device/stream/:id", s.streamDeviceHandler) // call pythoncli for live stream
+	s.fastHttp.GET("/api/device/stream/:id/start", s.startStreamHandler) // call pythoncli for start live stream
+	s.fastHttp.GET("/api/device/stream/:id/stop", s.stopStreamHandler) // call pythoncli for stop live stream
 
 	// verification Mac Handler
 	s.fastHttp.POST("/api/mac/verification", s.verificationMacHandler)
@@ -288,7 +289,7 @@ func (s *services) snapshotDeviceHandler(ctx *fasthttp.RequestCtx) {
 	ctx.Write(reply)
 }
 
-func (s *services) streamDeviceHandler(ctx *fasthttp.RequestCtx) {
+func (s *services) startStreamHandler(ctx *fasthttp.RequestCtx) {
 	ctx.Response.Header.Set("Content-Type", "application/json")
 	rep := &respModel{}
 	var d DeviceSchema
@@ -313,6 +314,35 @@ func (s *services) streamDeviceHandler(ctx *fasthttp.RequestCtx) {
 	}
 
 	rep.Data = d.RTMP
+	reply, _ := json.Marshal(rep)
+	ctx.SetStatusCode(fasthttp.StatusOK)
+	ctx.Write(reply)
+}
+
+func (s *services) stopStreamHandler(ctx *fasthttp.RequestCtx) {
+	ctx.Response.Header.Set("Content-Type", "application/json")
+	rep := &respModel{}
+	var d DeviceSchema
+	id := ctx.UserValue("id").(string)
+	collectionDevice := s.mongo.Db.Collection("devices")
+	objID, _ := primitive.ObjectIDFromHex(id)
+	filter := bson.D{{Key: "_id", Value: objID}}
+	err := collectionDevice.FindOne(ctx, filter).Decode(&d)
+	if err != nil {
+		errorResp(ctx, fmt.Sprintf("Not found device! Error:%s", err.Error()), fasthttp.StatusInternalServerError)
+		//if err == mongo.ErrNoDocuments {
+		//	return
+		//}
+		return
+	}
+
+	_, err = exec.Command("/usr/local/bin/action", "stopstream").Output()
+	if err != nil {
+		errorResp(ctx, fmt.Sprintf("Run Command failed! Error:%s", err.Error()), fasthttp.StatusInternalServerError)
+		return
+	}
+
+	rep.Data = true
 	reply, _ := json.Marshal(rep)
 	ctx.SetStatusCode(fasthttp.StatusOK)
 	ctx.Write(reply)
@@ -392,7 +422,7 @@ func (s *services) createDevicesHandler(ctx *fasthttp.RequestCtx) {
 		ctx.Error(err.Error(), fasthttp.StatusInternalServerError)
 		return
 	}
-	rep.Data = true
+	rep.Data = device
 	reply, _ := json.Marshal(rep)
 	ctx.SetStatusCode(fasthttp.StatusCreated)
 	ctx.Write(reply)
