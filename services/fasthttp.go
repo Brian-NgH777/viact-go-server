@@ -163,7 +163,7 @@ func (s *services) FastHttp(host string, port int) {
 	s.fastHttp.POST("/api/pi/access-token/extend", s.extendPiAccessTokenHandler)
 
 	// Live stream Handler
-	s.fastHttp.GET("/api/device/stream/{id}", s.streamDeviceHandler) // call pythoncli for live stream
+	s.fastHttp.GET("/api/device/stream/:id", s.streamDeviceHandler) // call pythoncli for live stream
 
 	// verification Mac Handler
 	s.fastHttp.POST("/api/mac/verification", s.verificationMacHandler)
