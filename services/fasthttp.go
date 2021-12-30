@@ -413,15 +413,17 @@ func (s *services) createDevicesHandler(ctx *fasthttp.RequestCtx) {
 	device.PTZ = v.PTZ
 	device.Thumbnail = v.Thumbnail
 	device.CameraName = v.CameraName
-	device.RTMP = fmt.Sprintf("rtmp://13.212.12.141:1935/live/s%d", sec)
+	device.RTMP = fmt.Sprintf("rtmp://13.212.12.141:1935/live/%d", sec)
 	device.CreatedAt = time.Now().UTC()
 	device.UpdatedAt = time.Now().UTC()
 
-	_, err = collectionDevice.InsertOne(ctx, device)
+	m, err := collectionDevice.InsertOne(ctx, device)
 	if err != nil {
 		ctx.Error(err.Error(), fasthttp.StatusInternalServerError)
 		return
 	}
+	id ,_ := primitive.ObjectIDFromHex(m.InsertedID.(string))
+	device.ID = id
 	rep.Data = device
 	reply, _ := json.Marshal(rep)
 	ctx.SetStatusCode(fasthttp.StatusCreated)
