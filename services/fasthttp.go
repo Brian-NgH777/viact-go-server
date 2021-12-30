@@ -396,6 +396,7 @@ func (s *services) createDevicesHandler(ctx *fasthttp.RequestCtx) {
 	sec := now.Unix()
 
 	collectionDevice := s.mongo.Db.Collection("devices")
+	device.ID = primitive.NewObjectID()
 	device.IP = v.Ip
 	device.User = v.User
 	device.Password = v.Password
@@ -417,13 +418,12 @@ func (s *services) createDevicesHandler(ctx *fasthttp.RequestCtx) {
 	device.CreatedAt = time.Now().UTC()
 	device.UpdatedAt = time.Now().UTC()
 
-	m, err := collectionDevice.InsertOne(ctx, device)
+	_, err = collectionDevice.InsertOne(ctx, device)
 	if err != nil {
-		ctx.Error(err.Error(), fasthttp.StatusInternalServerError)
+		errorResp(ctx, err.Error(), fasthttp.StatusInternalServerError)
 		return
 	}
-	id ,_ := primitive.ObjectIDFromHex(m.InsertedID.(string))
-	device.ID = id
+
 	rep.Data = device
 	reply, _ := json.Marshal(rep)
 	ctx.SetStatusCode(fasthttp.StatusCreated)
