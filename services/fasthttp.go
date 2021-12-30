@@ -112,6 +112,7 @@ type DeviceSchema struct {
 	RTSPTransport string             `json:"rtspTransport,omitempty" bson:"rtspTransport,omitempty"`
 	HTTPPort      string             `json:"httpPort,omitempty" bson:"httpPort,omitempty"`
 	PTZ           string             `json:"ptz,omitempty" bson:"ptz,omitempty"`
+	HLS           string             `json:"hls,omitempty" bson:"hls,omitempty"`
 	Thumbnail     string             `json:"thumbnail,omitempty" bson:"thumbnail,omitempty"`
 	CameraName    string             `json:"cameraName,omitempty" bson:"cameraName,omitempty"`
 	RTMP          string             `json:"rtmp,omitempty" bson:"rtmp,omitempty"`
@@ -313,7 +314,7 @@ func (s *services) startStreamHandler(ctx *fasthttp.RequestCtx) {
 		return
 	}
 
-	rep.Data = d.RTMP
+	rep.Data = d.HLS
 	reply, _ := json.Marshal(rep)
 	ctx.SetStatusCode(fasthttp.StatusOK)
 	ctx.Write(reply)
@@ -412,6 +413,7 @@ func (s *services) createDevicesHandler(ctx *fasthttp.RequestCtx) {
 	device.RTSPTransport = v.RTSPTransport
 	device.HTTPPort = v.HTTPPort
 	device.PTZ = v.PTZ
+	device.HLS = fmt.Sprintf("https://streaming.viact.net/%d.m3u8", sec)
 	device.Thumbnail = v.Thumbnail
 	device.CameraName = v.CameraName
 	device.RTMP = fmt.Sprintf("rtmp://13.212.12.141:1935/live/%d", sec)
