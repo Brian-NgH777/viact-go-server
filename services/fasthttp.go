@@ -413,7 +413,7 @@ func (s *services) createDevicesHandler(ctx *fasthttp.RequestCtx) {
 	device.PTZ = v.PTZ
 	device.Thumbnail = v.Thumbnail
 	device.CameraName = v.CameraName
-	device.RTMP = fmt.Sprintf("rtmp://13.212.12.141:1935/live/%d", sec)
+	device.RTMP = fmt.Sprintf("rtmp://13.212.12.141:1935/live/s%d", sec)
 	device.CreatedAt = time.Now().UTC()
 	device.UpdatedAt = time.Now().UTC()
 
