@@ -413,7 +413,7 @@ func (s *services) createDevicesHandler(ctx *fasthttp.RequestCtx) {
 	device.RTSPTransport = v.RTSPTransport
 	device.HTTPPort = v.HTTPPort
 	device.PTZ = v.PTZ
-	device.HLS = fmt.Sprintf("https://streaming.viact.net/%d.m3u8", sec)
+	device.HLS = fmt.Sprintf("https://d13q3kgjetic75.cloudfront.net/%d.m3u8", sec)
 	device.Thumbnail = v.Thumbnail
 	device.CameraName = v.CameraName
 	device.RTMP = fmt.Sprintf("rtmp://13.212.12.141:1935/live/%d", sec)
