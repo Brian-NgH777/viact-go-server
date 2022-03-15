@@ -159,6 +159,9 @@ func (s *services) FastHttp(host string, port int) {
 	s.fastHttp.GET("/api/pi/status", s.piStatusHandler)
 	s.fastHttp.POST("/api/pi/health", WebhookAuth(s.piHealthHandler))
 
+	// test op
+	s.fastHttp.GET("/api/open-weather/:type", s.openWeatherHandler)
+
 	// auth pi
 	s.fastHttp.POST("/api/pi/register", s.registerPiHandler)
 	s.fastHttp.POST("/api/pi/access-token/extend", s.extendPiAccessTokenHandler)
@@ -196,6 +199,55 @@ func (s *services) FastHttp(host string, port int) {
 
 func (s *services) pingHandler(ctx *fasthttp.RequestCtx) {
 	ctx.Write([]byte("Ping Pong Pong"))
+}
+
+func (s *services) openWeatherHandler(ctx *fasthttp.RequestCtx) {
+	ctx.Response.Header.Set("Content-Type", "application/json")
+	rep := &respModel{}
+	t := ctx.UserValue("type").(string)
+	switch t {
+	case "hourly-forecast-2days":
+		d, err := FindHourlyForecast2Days()
+		if err != nil {
+			errorResp(ctx, err.Error(), fasthttp.StatusBadRequest)
+			return
+		}
+		rep.Data = d
+	case "daily-forecast-7days":
+		d, err := FindDailyForecast7days()
+		if err != nil {
+			errorResp(ctx, err.Error(), fasthttp.StatusBadRequest)
+			return
+		}
+		rep.Data = d
+	case "national-weather-alerts":
+		d, err := FindNationalWeatherAlerts()
+		if err != nil {
+			errorResp(ctx, err.Error(), fasthttp.StatusBadRequest)
+			return
+		}
+		rep.Data = d
+	case "previous-5days":
+		d, err := FindHistoricalWeather5Days()
+		if err != nil {
+			errorResp(ctx, err.Error(), fasthttp.StatusBadRequest)
+			return
+		}
+		rep.Data = d
+	case "air-pollution-forecast":
+		d, err := FindAirPollution()
+		if err != nil {
+			errorResp(ctx, err.Error(), fasthttp.StatusBadRequest)
+			return
+		}
+		rep.Data = d
+	default:
+		errorResp(ctx, "type failed", fasthttp.StatusBadRequest)
+	}
+
+	reply, _ := json.Marshal(rep)
+	ctx.SetStatusCode(200)
+	ctx.Write(reply)
 }
 
 func (s *services) verificationMacHandler(ctx *fasthttp.RequestCtx) {
