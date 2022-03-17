@@ -1,6 +1,7 @@
 package services
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
@@ -8,6 +9,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"log"
+	"strings"
 )
 
 const (
@@ -16,41 +18,44 @@ const (
 	AWS_S3_SECRET_ACCESS_KEY2 = "Dp24PksFXI3fbFz5kWZMl2/jmOeVjvk5UivODwRJ"
 )
 
+type Result []interface{}
+type Object interface{}
+
 type D struct {
-	ID             string `json:"id"`
-	TimezoneOffset string `json:"timezone_offset"`
-	Lon            string `json:"lon"`
-	Lat            string `json:"lat"`
-	Timezone       string `json:"timezone"`
-	CreatedAt      string `json:"createdAt"`
+	ID             *string `json:"id"`
+	TimezoneOffset *string `json:"timezone_offset"`
+	Lon            *string `json:"lon"`
+	Lat            *string `json:"lat"`
+	Timezone       *string `json:"timezone"`
+	CreatedAt      *string `json:"createdAt"`
 }
 
 type Ho struct {
-	Hourly string `json:"hourly"`
+	Hourly interface{}
 	Info   *D
 }
 
 type Da struct {
-	Daily string `json:"daily"`
+	Daily interface{}
 	Info  *D
 }
 
 type Na struct {
-	Alerts string `json:"alerts"`
+	Alerts interface{}
 	Info   *D
 }
 
 type Hi struct {
-	Hourly  string `json:"hourly"`
-	Current string `json:"current"`
+	Hourly  interface{}
+	Current interface{}
 	Info    *D
 }
 
 type AP struct {
-	ID        string `json:"id"`
-	List      string `json:"list"`
-	Coord     string `json:"coord"`
-	CreatedAt string `json:"createdAt"`
+	ID        *string `json:"id"`
+	List      interface{}
+	Coord     interface{}
+	CreatedAt *string `json:"createdAt"`
 }
 
 var se *session.Session
@@ -99,15 +104,21 @@ func FindHourlyForecast2Days() (d []*Ho, err error) {
 	}
 
 	for _, v := range result.Items {
+		var arr Result
+		str := *v["hourly"].S
+		str = strings.ReplaceAll(str, "'", "\"")
+		if err = json.Unmarshal([]byte(str), &arr); err != nil {
+			return nil, err
+		}
 		d = append(d, &Ho{
-			Hourly: v["hourly"].String(),
+			Hourly: arr,
 			Info: &D{
-				ID:             v["id"].String(),
-				TimezoneOffset: v["timezone_offset"].String(),
-				Lon:            v["lon"].String(),
-				Lat:            v["lat"].String(),
-				Timezone:       v["timezone"].String(),
-				CreatedAt:      v["createdAt"].String(),
+				ID:             v["id"].S,
+				TimezoneOffset: v["timezone_offset"].N,
+				Lon:            v["lon"].S,
+				Lat:            v["lat"].S,
+				Timezone:       v["timezone"].S,
+				CreatedAt:      v["createdAt"].S,
 			},
 		})
 	}
@@ -145,15 +156,21 @@ func FindDailyForecast7days() (d []*Da, err error) {
 	}
 
 	for _, v := range result.Items {
+		var arr Result
+		str := *v["daily"].S
+		str = strings.ReplaceAll(str, "'", "\"")
+		if err = json.Unmarshal([]byte(str), &arr); err != nil {
+			return nil, err
+		}
 		d = append(d, &Da{
-			Daily: v["daily"].String(),
+			Daily: arr,
 			Info: &D{
-				ID:             v["id"].String(),
-				TimezoneOffset: v["timezone_offset"].String(),
-				Lon:            v["lon"].String(),
-				Lat:            v["lat"].String(),
-				Timezone:       v["timezone"].String(),
-				CreatedAt:      v["createdAt"].String(),
+				ID:             v["id"].S,
+				TimezoneOffset: v["timezone_offset"].N,
+				Lon:            v["lon"].S,
+				Lat:            v["lat"].S,
+				Timezone:       v["timezone"].S,
+				CreatedAt:      v["createdAt"].S,
 			},
 		})
 	}
@@ -191,15 +208,21 @@ func FindNationalWeatherAlerts() (d []*Na, err error) {
 	}
 
 	for _, v := range result.Items {
+		var arr Result
+		str := *v["alerts"].S
+		str = strings.ReplaceAll(str, "'", "\"")
+		if err = json.Unmarshal([]byte(str), &arr); err != nil {
+			return nil, err
+		}
 		d = append(d, &Na{
-			Alerts: v["alerts"].String(),
+			Alerts: arr,
 			Info: &D{
-				ID:             v["id"].String(),
-				TimezoneOffset: v["timezone_offset"].String(),
-				Lon:            v["lon"].String(),
-				Lat:            v["lat"].String(),
-				Timezone:       v["timezone"].String(),
-				CreatedAt:      v["createdAt"].String(),
+				ID:             v["id"].S,
+				TimezoneOffset: v["timezone_offset"].N,
+				Lon:            v["lon"].S,
+				Lat:            v["lat"].S,
+				Timezone:       v["timezone"].S,
+				CreatedAt:      v["createdAt"].S,
 			},
 		})
 	}
@@ -237,16 +260,29 @@ func FindHistoricalWeather5Days() (d []*Hi, err error) {
 	}
 
 	for _, v := range result.Items {
+		var arrH Result
+		str := *v["hourly"].S
+		str = strings.ReplaceAll(str, "'", "\"")
+		if err = json.Unmarshal([]byte(str), &arrH); err != nil {
+			return nil, err
+		}
+
+		var objC Object
+		str2 := *v["current"].S
+		str2 = strings.ReplaceAll(str2, "'", "\"")
+		if err = json.Unmarshal([]byte(str2), &objC); err != nil {
+			return nil, err
+		}
 		d = append(d, &Hi{
-			Hourly:  v["hourly"].String(),
-			Current: v["current"].String(),
+			Hourly:  arrH,
+			Current: objC,
 			Info: &D{
-				ID:             v["id"].String(),
-				TimezoneOffset: v["timezone_offset"].String(),
-				Lon:            v["lon"].String(),
-				Lat:            v["lat"].String(),
-				Timezone:       v["timezone"].String(),
-				CreatedAt:      v["createdAt"].String(),
+				ID:             v["id"].S,
+				TimezoneOffset: v["timezone_offset"].N,
+				Lon:            v["lon"].S,
+				Lat:            v["lat"].S,
+				Timezone:       v["timezone"].S,
+				CreatedAt:      v["createdAt"].S,
 			},
 		})
 	}
@@ -284,11 +320,24 @@ func FindAirPollution() (d []*AP, err error) {
 	}
 
 	for _, v := range result.Items {
+		var arrL Result
+		str := *v["list"].S
+		str = strings.ReplaceAll(str, "'", "\"")
+		if err = json.Unmarshal([]byte(str), &arrL); err != nil {
+			return nil, err
+		}
+
+		var objC Object
+		str2 := *v["coord"].S
+		str2 = strings.ReplaceAll(str2, "'", "\"")
+		if err = json.Unmarshal([]byte(str2), &objC); err != nil {
+			return nil, err
+		}
 		d = append(d, &AP{
-			ID:        v["id"].String(),
-			List:      v["list"].String(),
-			Coord:     v["coord"].String(),
-			CreatedAt: v["createdAt"].String(),
+			ID:        v["id"].S,
+			List:      arrL,
+			Coord:     objC,
+			CreatedAt: v["createdAt"].S,
 		})
 	}
 

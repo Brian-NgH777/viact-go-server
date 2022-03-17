@@ -133,9 +133,9 @@ type webhookDeviceItem struct {
 
 func New() *services {
 	fastHttp := fasthttprouter.New()
-	redis := RConnect()
-	mongo := MConnect()
-	return &services{fastHttp: fastHttp, redis: redis, mongo: mongo}
+	//redis := RConnect()
+	//mongo := MConnect()
+	return &services{fastHttp: fastHttp} // , redis: redis, mongo: mongo
 }
 
 func CORS(next fasthttp.RequestHandler) fasthttp.RequestHandler {
